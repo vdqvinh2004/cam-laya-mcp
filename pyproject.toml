@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cam-laya-mcp"
+version = "0.1.0"
+description = "Local Laya-MLX decisions for coding agents"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = ["mcp>=1.0,<2", "json5>=0.9,<1"]
+
+[project.optional-dependencies]
+mlx = ["laya-mlx>=0.2,<0.3"]
+test = ["pytest>=8"]
+
+[project.scripts]
+cam-laya-mcp = "laya_agent.cli:main"
+laya-agent = "laya_agent.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/laya_agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

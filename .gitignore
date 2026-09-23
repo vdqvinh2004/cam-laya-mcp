@@ -1,0 +1,13 @@
+.venv/
+venv/
+dist/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.codebase-memory/
+*.pyc
+.env*
+.DS_Store
+.idea/
+.vscode/
