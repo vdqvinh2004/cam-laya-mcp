@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import subprocess
 from functools import lru_cache
@@ -20,7 +21,7 @@ def compact(value: dict, *, max_bytes: int = 2048) -> dict:
         item = value[key]
         if SECRET.search(key) or isinstance(item, (dict, list)):
             continue
-        if isinstance(item, (str, bool, int, float)) and not SECRET.search(str(item)):
+        if isinstance(item, (str, bool, int, float)) and (not isinstance(item, float) or math.isfinite(item)) and not SECRET.search(str(item)):
             result[key] = item[:160] if isinstance(item, str) else item
     if len(json.dumps(result).encode()) > max_bytes:
         raise ValueError("state too large")
@@ -33,9 +34,18 @@ def fingerprint(*parts: object) -> str:
 
 def git_facts(cwd: Path | None = None) -> dict:
     try:
-        result = subprocess.run(["git", "status", "--porcelain", "-uno"], cwd=cwd, capture_output=True, text=True, timeout=2, check=True)
-        lines = result.stdout.splitlines()
-        return {"git_dirty": bool(lines), "changed_files": len(lines)}
+        result = subprocess.run(["git", "-c", "core.quotepath=false", "status", "--porcelain", "-z"], cwd=cwd, capture_output=True, text=True, timeout=2, check=True)
+        lines = [part for part in result.stdout.split("\0") if len(part) >= 4 and part[2] == " " and set(part[:2]) <= set(" MADRCU?!")]
+        root = cwd or Path.cwd()
+        revision = []
+        for line in lines:
+            file = root / line[3:]
+            try:
+                stat = file.stat()
+                revision.append((line, stat.st_mtime_ns, stat.st_size))
+            except OSError:
+                revision.append((line,))
+        return {"git_dirty": bool(lines), "changed_files": len(lines), "cache_revision": fingerprint(result.stdout, revision)}
     except (OSError, subprocess.SubprocessError):
         return {}
 

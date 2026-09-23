@@ -5,7 +5,7 @@ import re
 from .config import load_config
 from .context import git_facts, project_facts
 from .daemon import request
-from .policy import hard_risk
+from .policy import hard_risk, unavailable_decision
 
 TASK_WORD = re.compile(r"\b(implement|fix|debug|refactor|test|review|document|build|add|remove|migrate|configure|investigate)\b", re.I)
 SECRET_WORD = re.compile(r"(?i)(api.?key|password|secret|credential|token)\s*[:=]")
@@ -13,12 +13,9 @@ SECRET_WORD = re.compile(r"(?i)(api.?key|password|secret|credential|token)\s*[:=
 
 def _call(policy: str, state: dict) -> dict:
     try:
-        return request("decide", policy=policy, state=state, timeout=5)
+        return request("decide", policy=policy, state=state, source="hook", timeout=5)
     except Exception:
-        if policy == "risk_check":
-            reason = hard_risk(str(state.get("action", "")))
-            return {"risk": "high" if reason else "unknown", "requires_human": bool(reason), "reason_code": reason or "runtime_unavailable"}
-        return {"decision": "defer_to_agent"}
+        return unavailable_decision(policy, state)
 
 
 def run(client: str, event: str, payload: dict) -> dict:
@@ -51,15 +48,19 @@ def run(client: str, event: str, payload: dict) -> dict:
             if hard_risk(path) in {"secrets_access", "credential_manipulation"}:
                 return _deny(client, event, "secrets_access: obtain human approval before reading this file")
             return {}
-        if name not in {"Bash", "bash", "exec_command"}:
+        if name not in {"Bash", "bash", "shell", "exec_command"}:
             return {}
         command = str(args.get("command") or args.get("cmd") or "")
         if not command:
             return {}
-        if re.search(r"\bgit\s+commit\b", command):
-            review = _call("review_decision", {"current_phase": "review", **project_facts(), **git_facts()})
-            if review.get("decision") in {"run_tests", "request_human_review"}:
-                return _context(client, event, f"Local precommit decision: {review['decision']}.")
+        hint = None
+        if client != "opencode" and re.search(r"\bgit\s+commit\b", command):
+            facts = {**project_facts(), **git_facts()}
+            test = _call("test_decision", {"current_phase": "testing", **facts})
+            review = _call("review_decision", {"current_phase": "review", **facts})
+            decisions = [result["decision"] for result in (test, review) if result.get("decision") not in {None, "defer_to_agent", "no_test_needed", "continue", "stop"}]
+            if decisions:
+                hint = "Local precommit decisions: " + ", ".join(decisions) + "."
         # Ordinary commands skip model inference. Dangerous commands use a hard rule.
         reason = hard_risk(command)
         if reason:
@@ -68,18 +69,23 @@ def run(client: str, event: str, payload: dict) -> dict:
             risk = _call("risk_check", {"action": command[:320], **git_facts()})
             if risk.get("requires_human"):
                 return _deny(client, event, "Local risk check requires human approval")
-        return {}
+        return _context(client, event, hint) if hint else {}
     if event == "PostToolUse":
         name = str(payload.get("tool_name") or "")
-        if name not in {"Bash", "bash", "exec_command"}:
+        if name not in {"Bash", "bash", "shell", "exec_command"}:
             return {}
         args = payload.get("tool_input") or {}
         command = str(args.get("command") or args.get("cmd") or "") if isinstance(args, dict) else ""
         if not re.search(r"\b(pytest|npm\s+test|cargo\s+test|go\s+test|vitest)\b", command):
             return {}
         response = payload.get("tool_response") or {}
-        failed = isinstance(response, dict) and (response.get("exit_code", 0) != 0 or response.get("error"))
+        metadata = response.get("metadata") if isinstance(response, dict) else None
+        exit_code = response.get("exit_code", metadata.get("exit", 0) if isinstance(metadata, dict) else 0) if isinstance(response, dict) else 0
+        failed = isinstance(response, dict) and (exit_code != 0 or response.get("error"))
         if not failed:
+            review = _call("review_decision", {"current_phase": "review", "last_test_result": "passed", **project_facts(), **git_facts()})
+            if review.get("decision") in {"self_review", "run_tests", "request_human_review"}:
+                return _context(client, event, f"Local post-test decision: {review['decision']}.")
             return {}
         result = _call("next_action", {"current_phase": "debugging", "last_test_result": "failed"})
         if result.get("decision") == "debug":

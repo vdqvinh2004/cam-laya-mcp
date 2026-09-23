@@ -22,7 +22,9 @@ ISOLATED_VENV = Path.home() / ".local/share/laya-agent/venv"
 
 
 def _isolated_exe() -> Path | None:
-    executable = ISOLATED_VENV / "bin/laya-agent"
+    executable = ISOLATED_VENV / "bin/cam-laya-mcp"
+    if not executable.exists():
+        executable = ISOLATED_VENV / "bin/laya-agent"
     if (ISOLATED_VENV / ".laya-agent-owned").exists() and executable.exists():
         return executable
     return None
@@ -46,11 +48,17 @@ def setup(args) -> int:
     if isolated and subprocess.run([str(ISOLATED_VENV / "bin/python"), "-c", "import laya_mlx"], capture_output=True).returncode:
         isolated = None
     executable = str(isolated) if isolated else _exe()
-    if not env["installed"] and not isolated:
+    smoke_ok = False
+    if env["installed"] and not isolated:
+        try:
+            smoke_ok = subprocess.run([executable, "test"], capture_output=True, timeout=60).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    if not isolated and not smoke_ok:
         if (ISOLATED_VENV / ".laya-agent-owned").exists() or args.yes:
             approved = True
         elif sys.stdin.isatty():
-            approved = input("Laya-MLX is not installed. It provides local typed-decision inference. Install Laya-MLX now? [Y/n] ").strip().lower() in {"", "y", "yes"}
+            approved = input("Laya-MLX is unavailable to cam-laya-mcp. Install an isolated local runtime now? [Y/n] ").strip().lower() in {"", "y", "yes"}
         else:
             print("Laya-MLX missing. Run interactively or pass --yes to approve installation.")
             return 1
@@ -70,19 +78,13 @@ def setup(args) -> int:
         package = str(source) + "[mlx]" if (source / "pyproject.toml").exists() else "cam-laya-mcp[mlx]"
         subprocess.run(["uv", "pip", "install", "--python", str(venv / "bin/python"), package], check=True)
         (venv / ".laya-agent-owned").touch()
-        executable = str(venv / "bin/laya-agent")
+        executable = str(venv / "bin/cam-laya-mcp")
         subprocess.run([str(venv / "bin/python"), "-c", "import laya_mlx; print('Laya-MLX import: OK')"], check=True)
-    elif isolated and shutil.which("uv"):
-        source = Path(__file__).resolve().parents[2]
-        package = str(source) + "[mlx]" if (source / "pyproject.toml").exists() else "cam-laya-mcp[mlx]"
-        installed = subprocess.run([str(ISOLATED_VENV / "bin/python"), "-c", "import importlib.metadata; importlib.metadata.version('laya-agent')"], capture_output=True)
-        if installed.returncode == 0:
-            subprocess.run(["uv", "pip", "uninstall", "--python", str(ISOLATED_VENV / "bin/python"), "laya-agent"], check=True)
-        subprocess.run(["uv", "pip", "install", "--python", str(ISOLATED_VENV / "bin/python"), "--reinstall-package", "cam-laya-mcp", package], check=True)
+    elif isolated:
+        executable = str(isolated)
     write_default()
     # Loading performs checkpoint discovery/download via current Laya-MLX API.
-    smoke = subprocess.run([executable, "test"], text=True)
-    if smoke.returncode:
+    if not smoke_ok and subprocess.run([executable, "test"], text=True).returncode:
         print("Model smoke test failed; agent configuration was not changed.")
         return 1
     failed = False
@@ -233,8 +235,14 @@ def main() -> None:
         try:
             _json(request("stats", start=False))
         except Exception:
+            from .config import Config
             from .daemon import METRICS
-            _json(json.loads(METRICS.read_text()) if METRICS.exists() else {"laya_decisions": 0, "estimated_tokens_saved": 0})
+            from .policy import DecisionEngine
+            try:
+                saved = json.loads(METRICS.read_text())
+            except (OSError, ValueError):
+                saved = DecisionEngine(Config()).stats()
+            _json(saved)
         code = 0
     elif args.command == "benchmark":
         _json(benchmark())

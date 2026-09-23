@@ -10,7 +10,7 @@ After one setup, supported coding agents use Laya-MLX locally for selected small
 2. On session start, native hooks/plugins start one local process. The model loads on the first useful decision or when preload is configured. Normal coding continues if the runtime is unavailable.
 3. A dangerous tool action is blocked by a deterministic rule. Model confidence cannot bypass it.
 4. An agent can call seven compact MCP tools when its own workflow makes that useful. MCP registration alone makes no promise of automatic calls.
-5. A repeated decision can be served from a bounded in-memory cache. Free-form user tasks and arbitrary commands are excluded from cache fingerprints.
+5. A repeated decision can be served from a bounded in-memory cache. Short task requests without secret markers and strictly shaped push commands use digest keys; arbitrary commands remain uncached. Task changes, repository metadata changes, config changes, and model changes invalidate relevant entries.
 6. `doctor`, `benchmark`, `stats`, `disable`, and `uninstall` report or change only this integration.
 
 ## Acceptance
@@ -19,7 +19,8 @@ After one setup, supported coding agents use Laya-MLX locally for selected small
 - No PyTorch or cloud inference dependency.
 - Codex/Claude native hooks and OpenCode plugin automatically handle supported events.
 - Existing client settings survive setup; owned entries alone are removed.
-- Missing model or failed inference yields normal agent workflow except hard rules.
+- Missing model or failed inference yields normal agent workflow except hard rules and configured mandatory safety checks.
+- Codex and Claude hooks can provide test and review hints before commit; OpenCode blocks risky actions and attaches post-test hints to the tool result. Ordinary tool results are skipped.
 - Actual benchmark samples are reported; estimated savings are not invented.
 
 ## Constraints

@@ -6,7 +6,7 @@ Python 3.11+ package, official `mcp` Python SDK, `laya-mlx` 0.2 API, standard li
 
 ## Architecture
 
-`runtime.py` loads the published MLX checkpoint once; `policy.py` combines hard rules and typed choice decisions; `context.py` compresses short project and task facts; `daemon.py` shares warm model state between hook CLI calls and MCP requests. `mcp_server.py` exposes seven stdio tools. `integrations.py` owns client configuration and native hooks/plugins. `cli.py` handles setup, diagnostics, benchmark, and removal.
+`runtime.py` loads the published MLX checkpoint once; `policy.py` combines hard rules, typed choice decisions, selective digest-key caching, and mandatory-safety fallback; `context.py` compresses short project and task facts and derives a repository metadata revision. `daemon.py` shares warm model state between hook CLI calls and MCP requests, serializes decisions, and rotates local event logs. `mcp_server.py` exposes seven stdio tools. `integrations.py` owns client configuration and native hooks/plugins, including OpenCode's discovered live config source. `cli.py` handles setup, diagnostics, benchmark, and removal.
 
 ## Sequence
 
@@ -19,6 +19,6 @@ Python 3.11+ package, official `mcp` Python SDK, `laya-mlx` 0.2 API, standard li
 
 ## Verification
 
-`uv run pytest -q`, `uvx ruff check --select F,I src tests`, `uv build`, `cam-laya-mcp test`, `cam-laya-mcp benchmark`, and `cam-laya-mcp doctor`. The final three require installed Laya-MLX for meaningful model results.
+`uv run pytest -q`, `uvx ruff check --select F,I src tests`, `uv build`, `cam-laya-mcp test`, `cam-laya-mcp benchmark`, and `cam-laya-mcp doctor`. The final three require installed Laya-MLX for meaningful model results. Simulated daemon outages must fail closed when mandatory safety is enabled; end-to-end stdio tests cover stale sockets, concurrent requests, and event rotation.
 
 See [ADR 0001](../../docs/adr/0001-local-decision-layer.md) for source-backed capability choices.

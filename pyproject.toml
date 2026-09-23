@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "cam-laya-mcp"
 version = "0.1.0"
 description = "Local Laya-MLX decisions for coding agents"
+readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 dependencies = ["mcp>=1.0,<2", "json5>=0.9,<1"]
@@ -17,6 +18,10 @@ test = ["pytest>=8"]
 [project.scripts]
 cam-laya-mcp = "laya_agent.cli:main"
 laya-agent = "laya_agent.cli:main"
+
+[project.urls]
+Repository = "https://github.com/vdqvinh2004/cam-laya-mcp"
+Issues = "https://github.com/vdqvinh2004/cam-laya-mcp/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/laya_agent"]

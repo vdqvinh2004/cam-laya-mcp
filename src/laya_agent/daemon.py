@@ -11,7 +11,7 @@ import threading
 import time
 
 from .config import CONFIG_FILE, STATE_DIR, load_config
-from .policy import DecisionEngine
+from .policy import OPTIONS, DecisionEngine
 
 SOCKET = STATE_DIR / "agent.sock"
 METRICS = STATE_DIR / "stats.json"
@@ -25,10 +25,11 @@ class Handler(socketserver.StreamRequestHandler):
         if modified != self.server.config_mtime:
             with self.server.config_lock:
                 if modified != self.server.config_mtime:
-                    replacement = DecisionEngine(load_config())
-                    replacement.counts.update(self.server.engine.counts)
-                    self.server.engine = replacement
-                    self.server.config_mtime = modified
+                    with self.server.metrics_lock:
+                        replacement = DecisionEngine(load_config())
+                        replacement.counts.update(self.server.engine.counts)
+                        self.server.engine = replacement
+                        self.server.config_mtime = modified
         try:
             raw = self.rfile.readline(8193)
             if len(raw) > 8192:
@@ -39,14 +40,21 @@ class Handler(socketserver.StreamRequestHandler):
             elif req.get("op") == "stats":
                 out = self.server.engine.stats()
             elif req.get("op") == "decide":
-                out = self.server.engine.decide(req["policy"], req.get("state", {}))
+                # ponytail: one lock keeps cache and counters consistent; split it if decision throughput matters.
                 with self.server.metrics_lock:
+                    source = req.get("source")
+                    if source in {"mcp", "hook"}:
+                        self.server.engine.counts[f"{source}_decisions"] += 1
+                    out = self.server.engine.decide(req["policy"], req.get("state", {}))
                     tmp = METRICS.with_suffix(".tmp")
                     tmp.write_text(json.dumps(self.server.engine.stats()))
                     tmp.replace(METRICS)
-                    with (STATE_DIR / "events.jsonl").open("a") as log:
+                    events = STATE_DIR / "events.jsonl"
+                    if events.exists() and events.stat().st_size > 1_000_000:
+                        events.replace(events.with_suffix(".jsonl.1"))
+                    with events.open("a") as log:
                         log.write(json.dumps({"time": round(time.time()), "policy": req["policy"], "decision": out.get("decision", out.get("risk")), "confidence": out.get("confidence"), "latency_ms": self.server.engine.latencies[-1] if self.server.engine.latencies else None, "success": out.get("reason_code") != "runtime_unavailable"}) + "\n")
-                    os.chmod(STATE_DIR / "events.jsonl", 0o600)
+                    os.chmod(events, 0o600)
             elif req.get("op") == "preload":
                 self.server.engine.runtime.load()
                 out = self.server.engine.status()
@@ -88,8 +96,15 @@ def serve() -> None:
         server.engine = DecisionEngine(load_config())
         try:
             saved = json.loads(METRICS.read_text())
-            for key in ("laya_decisions", "cache_hits", "laya_failures", "hard_rules", "estimated_llm_calls_avoided", "estimated_tokens_saved"):
+            if not isinstance(saved, dict):
+                raise ValueError("invalid saved stats")
+            for key in ("laya_decisions", "cache_hits", "laya_failures", "hard_rules", "escalations", "estimated_llm_calls_avoided", "estimated_tokens_saved", "mcp_decisions", "hook_decisions"):
                 server.engine.counts[key] = int(saved.get(key, 0))
+            by_policy = saved.get("decisions_by_policy", {})
+            if not isinstance(by_policy, dict):
+                raise ValueError("invalid saved policy stats")
+            for policy in OPTIONS:
+                server.engine.counts[f"policy_{policy}"] = int(by_policy.get(policy, 0))
         except (FileNotFoundError, ValueError, TypeError):
             pass
         server.metrics_lock = threading.Lock()
@@ -108,8 +123,8 @@ def serve() -> None:
             PIDFILE.unlink(missing_ok=True)
 
 
-def request(op: str, *, policy: str | None = None, state: dict | None = None, start: bool = True, timeout: float = 10) -> dict:
-    payload = (json.dumps({"op": op, "policy": policy, "state": state or {}}, separators=(",", ":")) + "\n").encode()
+def request(op: str, *, policy: str | None = None, state: dict | None = None, source: str | None = None, start: bool = True, timeout: float = 10) -> dict:
+    payload = (json.dumps({"op": op, "policy": policy, "state": state or {}, "source": source}, separators=(",", ":")) + "\n").encode()
     if len(payload) > 8192:
         raise ValueError("request too large")
     for attempt in range(20 if start else 1):
