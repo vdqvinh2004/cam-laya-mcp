@@ -45,7 +45,8 @@ def git_facts(cwd: Path | None = None) -> dict:
                 revision.append((line, stat.st_mtime_ns, stat.st_size))
             except OSError:
                 revision.append((line,))
-        return {"git_dirty": bool(lines), "changed_files": len(lines), "cache_revision": fingerprint(result.stdout, revision)}
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=cwd, capture_output=True, text=True, timeout=2)
+        return {"git_dirty": bool(lines), "changed_files": len(lines), "cache_revision": fingerprint(str(root.resolve()), head.stdout.strip() if head.returncode == 0 else "", result.stdout, revision)}
     except (OSError, subprocess.SubprocessError):
         return {}
 

@@ -28,3 +28,31 @@ After one setup, supported coding agents use Laya-MLX locally for selected small
 - Apple Silicon, macOS 14+, Python 3.11+ for Laya-MLX. An isolated Python 3.12 runtime is used at installation.
 - All model input stays local. Small whitelisted state only; no source files or whole conversations.
 - Codex user hooks require Codex trust review before they execute.
+
+## Milestone 5: Measurable agent efficiency
+
+The Milestone 4 Codex comparison showed higher token use and response time with Laya enabled. Milestone 5 must test whether selective local decisions improve a real coding workflow. A decision count or cache hit alone is not a benefit.
+
+### User story 1 (P1): Trustworthy measurement
+
+As a maintainer, I can see where a Codex task spends time and tokens, compare identical coding tasks with and without Laya, and tell actual quality from a marker match.
+
+**Independent acceptance:** At least six representative tasks use disposable identical checkouts, executable checks, and a patch-quality rubric. Paired trials are repeated with counterbalanced order. Results show input, cached input, output, wall time, time to first useful response, tool/hook calls, cold and warm model timings, quality, and failures. Billed cost remains unavailable unless a bill is actually captured; any public-rate estimate is labeled separately.
+
+### User story 2 (P1): Decisions only when useful
+
+As a Codex user, simple work proceeds without waiting for a cold local model. The agent can request a typed route decision through MCP when the task state changes.
+
+**Independent acceptance:** MCP owns task routing; prompt hooks do not infer automatically. Cached decisions invalidate on task, repository, config, or model change. Deterministic and low-value paths bypass inference. Hard risk and mandatory-safety behavior stay intact.
+
+### User story 3 (P2): Demonstrated net benefit
+
+As a maintainer, I ship an enabled policy only when it improves an eligible task cohort without reducing correctness or safety. Otherwise the policy stays disabled by default and the report says why.
+
+**Independent acceptance:** Labeled ambiguous decisions beat a simple deterministic baseline before they enter the agent path. The selected integration is compared with no Laya on the same task set. A benefit claim requires no quality regression, no hard-safety regression, and a repeatable reduction in total Codex tokens and elapsed time for eligible tasks; report overall and bypass-task results as well. Publish per-task variance and the raw aggregate metrics.
+
+### Milestone 6 experiment (not shipped): Retrieve repository context
+
+Hypothesis: a deterministic local MCP search can return relevant source and test locations for tasks with hidden target paths and reduce agent search effort.
+
+Outcome: Codex made zero retrieval calls across four discovery pilots, including after one stronger tool-use instruction. The adoption gate failed; the prototype was removed and no efficiency claim is supported. Details and pilot data are in `milestone-6-research.md` and `docs/codex-efficacy-baseline.md`.

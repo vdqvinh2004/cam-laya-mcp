@@ -156,8 +156,8 @@ def _remove_hooks(path: Path, commands: list[str]) -> None:
 
 
 def _install_hooks(path: Path, events: list[str], executable: str, client: str, owned: dict, key: str) -> None:
-    command = f"{shlex.quote(executable)} hook {client}"
-    stale = [item for item in owned.get(key, []) if not item.startswith(command + " ")]
+    wanted = {f"{shlex.quote(executable)} hook {client} {event}" for event in events}
+    stale = [item for item in owned.get(key, []) if item not in wanted]
     if stale:
         _remove_hooks(path, stale)
     added = _add_hooks(path, events, executable, client)
@@ -193,7 +193,7 @@ class CodexAdapter(ClientAdapter):
         super().__init__("codex")
 
     def capabilities(self) -> dict:
-        return {"mcp": True, "hooks": ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse"], "automatic": True, "config": str(CODEX_HOOKS)}
+        return {"mcp": True, "hooks": ["SessionStart", "PreToolUse", "PostToolUse"], "automatic": True, "config": str(CODEX_HOOKS)}
 
     def install(self, executable: str) -> None:
         owned = _manifest()
@@ -243,7 +243,7 @@ class ClaudeAdapter(ClientAdapter):
         super().__init__("claude")
 
     def capabilities(self) -> dict:
-        return {"mcp": True, "hooks": ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse"], "automatic": True, "config": str(CLAUDE_SETTINGS)}
+        return {"mcp": True, "hooks": ["SessionStart", "PreToolUse", "PostToolUse"], "automatic": True, "config": str(CLAUDE_SETTINGS)}
 
     def install(self, executable: str) -> None:
         owned = _manifest()

@@ -3,12 +3,14 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 import socket
 import socketserver
 import subprocess
 import sys
 import threading
 import time
+import uuid
 
 from .config import CONFIG_FILE, STATE_DIR, load_config
 from .policy import OPTIONS, DecisionEngine
@@ -41,7 +43,9 @@ class Handler(socketserver.StreamRequestHandler):
                 out = self.server.engine.stats()
             elif req.get("op") == "decide":
                 # ponytail: one lock keeps cache and counters consistent; split it if decision throughput matters.
+                queued = time.perf_counter()
                 with self.server.metrics_lock:
+                    queue_ms = round((time.perf_counter() - queued) * 1000, 2)
                     source = req.get("source")
                     if source in {"mcp", "hook"}:
                         self.server.engine.counts[f"{source}_decisions"] += 1
@@ -52,8 +56,15 @@ class Handler(socketserver.StreamRequestHandler):
                     events = STATE_DIR / "events.jsonl"
                     if events.exists() and events.stat().st_size > 1_000_000:
                         events.replace(events.with_suffix(".jsonl.1"))
+                    trace = self.server.engine.last_trace
                     with events.open("a") as log:
-                        log.write(json.dumps({"time": round(time.time()), "policy": req["policy"], "decision": out.get("decision", out.get("risk")), "confidence": out.get("confidence"), "latency_ms": self.server.engine.latencies[-1] if self.server.engine.latencies else None, "success": out.get("reason_code") != "runtime_unavailable"}) + "\n")
+                        log.write(json.dumps({
+                            "time": round(time.time()), "invocation_id": req.get("invocation_id"),
+                            "run_id": req.get("run_id"), "source": source, "policy": req["policy"],
+                            "decision": out.get("decision", out.get("risk")), "confidence": out.get("confidence"),
+                            "queue_ms": queue_ms, **trace,
+                            "success": out.get("reason_code") != "runtime_unavailable",
+                        }) + "\n")
                     os.chmod(events, 0o600)
             elif req.get("op") == "preload":
                 self.server.engine.runtime.load()
@@ -124,14 +135,43 @@ def serve() -> None:
 
 
 def request(op: str, *, policy: str | None = None, state: dict | None = None, source: str | None = None, start: bool = True, timeout: float = 10) -> dict:
-    payload = (json.dumps({"op": op, "policy": policy, "state": state or {}, "source": source}, separators=(",", ":")) + "\n").encode()
+    run_id = os.environ.get("CAM_LAYA_RUN_ID", "")
+    run_id = run_id if re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", run_id) else None
+    invocation_id = uuid.uuid4().hex
+    payload = (json.dumps({"op": op, "policy": policy, "state": state or {}, "source": source, "invocation_id": invocation_id, "run_id": run_id}, separators=(",", ":")) + "\n").encode()
     if len(payload) > 8192:
         raise ValueError("request too large")
+    started = time.perf_counter()
+
+    def record(status: str, connected: float | None = None) -> None:
+        if not run_id or op != "decide":
+            return
+        path = STATE_DIR / "client-events.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if path.exists() and path.stat().st_size > 1_000_000:
+            path.replace(path.with_suffix(".jsonl.1"))
+        with path.open("a") as log:
+            log.write(json.dumps({
+                "run_id": run_id, "invocation_id": invocation_id, "source": source, "policy": policy,
+                "status": status, "connect_ms": round(((connected or time.perf_counter()) - started) * 1000, 2),
+                "transport_ms": round((time.perf_counter() - connected) * 1000, 2) if connected else None,
+                "total_ms": round((time.perf_counter() - started) * 1000, 2),
+            }) + "\n")
+        path.chmod(0o600)
+
     for attempt in range(20 if start else 1):
-        try:
-            with socket.socket(socket.AF_UNIX) as sock:
-                sock.settimeout(timeout)
+        with socket.socket(socket.AF_UNIX) as sock:
+            sock.settimeout(timeout)
+            try:
                 sock.connect(str(SOCKET))
+            except OSError:
+                if attempt == 0 and start:
+                    STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    subprocess.Popen([sys.executable, "-m", "laya_agent.daemon"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                time.sleep(0.05)
+                continue
+            connected = time.perf_counter()
+            try:
                 sock.sendall(payload)
                 response = b""
                 while not response.endswith(b"\n") and len(response) <= 8192:
@@ -139,12 +179,16 @@ def request(op: str, *, policy: str | None = None, state: dict | None = None, so
                     if not chunk:
                         break
                     response += chunk
-                return json.loads(response)
-        except (OSError, ValueError):
-            if attempt == 0 and start:
-                STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
-                subprocess.Popen([sys.executable, "-m", "laya_agent.daemon"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-            time.sleep(0.05)
+                result = json.loads(response)
+            except OSError as exc:
+                record("timeout" if isinstance(exc, TimeoutError) else "failure", connected)
+                raise
+            except ValueError:
+                record("failure", connected)
+                raise
+            record("completed", connected)
+            return result
+    record("connection_failure")
     raise ConnectionError("local Laya process unavailable")
 
 

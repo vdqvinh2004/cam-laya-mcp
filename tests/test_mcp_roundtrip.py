@@ -29,9 +29,10 @@ async def _roundtrip(state_home):
         async with stdio_client(server) as (read, write):
             async with ClientSession(read, write) as session:
                 initialized = await session.initialize()
-                assert "laya_test_decision after code changes" in initialized.instructions
+                assert "laya_test_decision for ambiguous test scope" in initialized.instructions
                 tools = await session.list_tools()
                 assert len(tools.tools) == 7
+                assert all(t.annotations and t.annotations.readOnlyHint for t in tools.tools)
                 events.write_bytes(b"x" * 1_000_001)
                 result = await session.call_tool("laya_risk_check", {"action": "rm -rf /tmp/example"})
                 assert '"requires_human":true' in str(result).replace(" ", "")

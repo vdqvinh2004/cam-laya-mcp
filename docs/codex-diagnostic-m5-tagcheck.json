@@ -1,0 +1,105 @@
+{
+  "model": "gpt-6-luna",
+  "reasoning_effort": "low",
+  "results": [
+    {
+      "task": "route_task",
+      "condition": "baseline",
+      "cohort": "cold",
+      "eligible": null,
+      "exit_code": 0,
+      "elapsed_seconds": 19.59,
+      "first_response_ms": 14497.89,
+      "input_tokens": 16073,
+      "cached_input_tokens": 11008,
+      "output_tokens": 94,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 1
+    },
+    {
+      "task": "route_task",
+      "condition": "combined",
+      "cohort": "cold",
+      "eligible": null,
+      "exit_code": 0,
+      "elapsed_seconds": 24.79,
+      "first_response_ms": 14101.37,
+      "input_tokens": 16072,
+      "cached_input_tokens": 11008,
+      "output_tokens": 82,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 2
+    }
+  ]
+}

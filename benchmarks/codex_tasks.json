@@ -1,0 +1,30 @@
+[
+  {
+    "id": "route_task",
+    "prompt": "Plan a small feature: add a cache for repeated task classifications. Give a concise implementation outline.",
+    "marker": "cache"
+  },
+  {
+    "id": "failed_test",
+    "prompt": "A test just failed with an AssertionError in tests/test_core.py. If laya_next_action is available, call it with current_phase=debugging and last_test_result=failed, then report its decision. If unavailable, recommend the next action yourself.",
+    "marker": "debug",
+    "required_mcp_calls": 1
+  },
+  {
+    "id": "review_hint",
+    "prompt": "The tests passed. If laya_review_decision is available, call it with current_phase=review and last_test_result=passed, then report its decision. If unavailable, give me a concise self-review checklist.",
+    "marker": "review",
+    "required_mcp_calls": 1
+  },
+  {
+    "id": "cache_repeat",
+    "prompt": "Classify the short task 'Fix a failing test' twice and say whether the classifications match. If laya_route_task is available, call it twice with identical arguments; otherwise classify it yourself twice.",
+    "marker": "match",
+    "required_mcp_calls": 2
+  },
+  {
+    "id": "bypass",
+    "prompt": "What is 17 multiplied by 19? Reply with the number only.",
+    "marker": "323"
+  }
+]

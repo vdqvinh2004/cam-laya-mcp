@@ -1,0 +1,1012 @@
+{
+  "model": "gpt-6-luna",
+  "reasoning_effort": "low",
+  "results": [
+    {
+      "task": "route_task",
+      "condition": "baseline",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 19.56,
+      "first_response_ms": 14184.76,
+      "input_tokens": 16075,
+      "cached_input_tokens": 11008,
+      "output_tokens": 75,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 1
+    },
+    {
+      "task": "route_task",
+      "condition": "hooks",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 24.33,
+      "first_response_ms": 18795.79,
+      "input_tokens": 16073,
+      "cached_input_tokens": 11008,
+      "output_tokens": 86,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 2
+    },
+    {
+      "task": "route_task",
+      "condition": "mcp",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 19.38,
+      "first_response_ms": 13718.58,
+      "input_tokens": 16074,
+      "cached_input_tokens": 11008,
+      "output_tokens": 76,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 3
+    },
+    {
+      "task": "route_task",
+      "condition": "combined",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 24.76,
+      "first_response_ms": 19993.8,
+      "input_tokens": 16074,
+      "cached_input_tokens": 11008,
+      "output_tokens": 84,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 4
+    },
+    {
+      "task": "failed_test",
+      "condition": "hooks",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 17.45,
+      "first_response_ms": 8229.2,
+      "input_tokens": 32217,
+      "cached_input_tokens": 26112,
+      "output_tokens": 107,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 1
+    },
+    {
+      "task": "failed_test",
+      "condition": "mcp",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 21.36,
+      "first_response_ms": 8606.17,
+      "input_tokens": 48904,
+      "cached_input_tokens": 42240,
+      "output_tokens": 138,
+      "mcp_tool_calls": {
+        "laya_next_action": 1
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 1
+      },
+      "mcp_tool_outcomes": {
+        "failed_test": 1
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 2
+    },
+    {
+      "task": "failed_test",
+      "condition": "combined",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 20.75,
+      "first_response_ms": 8268.02,
+      "input_tokens": 51332,
+      "cached_input_tokens": 43264,
+      "output_tokens": 171,
+      "mcp_tool_calls": {
+        "laya_next_action": 1
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 1
+      },
+      "mcp_tool_outcomes": {
+        "failed_test": 1
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 3
+    },
+    {
+      "task": "failed_test",
+      "condition": "baseline",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 17.34,
+      "first_response_ms": 8264.37,
+      "input_tokens": 32224,
+      "cached_input_tokens": 26112,
+      "output_tokens": 116,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": false,
+      "answer_marker_match": false,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 4
+    },
+    {
+      "task": "review_hint",
+      "condition": "mcp",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 58.64,
+      "first_response_ms": 7911.77,
+      "input_tokens": 65314,
+      "cached_input_tokens": 58368,
+      "output_tokens": 163,
+      "mcp_tool_calls": {
+        "laya_review_decision": 1
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 1
+      },
+      "mcp_tool_outcomes": {
+        "low_confidence": 1
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 1
+    },
+    {
+      "task": "review_hint",
+      "condition": "combined",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 58.24,
+      "first_response_ms": 8934.26,
+      "input_tokens": 65329,
+      "cached_input_tokens": 58368,
+      "output_tokens": 179,
+      "mcp_tool_calls": {
+        "laya_review_decision": 1
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 1
+      },
+      "mcp_tool_outcomes": {
+        "low_confidence": 1
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 2
+    },
+    {
+      "task": "review_hint",
+      "condition": "baseline",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 18.57,
+      "first_response_ms": 8083.86,
+      "input_tokens": 32201,
+      "cached_input_tokens": 26112,
+      "output_tokens": 105,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 3
+    },
+    {
+      "task": "review_hint",
+      "condition": "hooks",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 16.8,
+      "first_response_ms": 10452.45,
+      "input_tokens": 32174,
+      "cached_input_tokens": 26112,
+      "output_tokens": 83,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 4
+    },
+    {
+      "task": "cache_repeat",
+      "condition": "combined",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 58.05,
+      "first_response_ms": 8646.37,
+      "input_tokens": 65481,
+      "cached_input_tokens": 58368,
+      "output_tokens": 196,
+      "mcp_tool_calls": {
+        "laya_route_task": 2
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 2
+      },
+      "mcp_tool_outcomes": {
+        "confidence_uncalibrated": 2
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 1
+    },
+    {
+      "task": "cache_repeat",
+      "condition": "baseline",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 16.9,
+      "first_response_ms": 7773.88,
+      "input_tokens": 32202,
+      "cached_input_tokens": 26112,
+      "output_tokens": 124,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 2
+    },
+    {
+      "task": "cache_repeat",
+      "condition": "hooks",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 16.43,
+      "first_response_ms": 10152.59,
+      "input_tokens": 32168,
+      "cached_input_tokens": 26112,
+      "output_tokens": 73,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 3
+    },
+    {
+      "task": "cache_repeat",
+      "condition": "mcp",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 55.8,
+      "first_response_ms": 7868.83,
+      "input_tokens": 65475,
+      "cached_input_tokens": 58368,
+      "output_tokens": 190,
+      "mcp_tool_calls": {
+        "laya_route_task": 2
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 2
+      },
+      "mcp_tool_outcomes": {
+        "confidence_uncalibrated": 2
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 4
+    },
+    {
+      "task": "bypass",
+      "condition": "baseline",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 12.75,
+      "first_response_ms": 8058.6,
+      "input_tokens": 16031,
+      "cached_input_tokens": 11008,
+      "output_tokens": 5,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 1
+    },
+    {
+      "task": "bypass",
+      "condition": "hooks",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 14.1,
+      "first_response_ms": 7330.02,
+      "input_tokens": 16029,
+      "cached_input_tokens": 11008,
+      "output_tokens": 5,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 2
+    },
+    {
+      "task": "bypass",
+      "condition": "mcp",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 12.58,
+      "first_response_ms": 7587.18,
+      "input_tokens": 16030,
+      "cached_input_tokens": 11008,
+      "output_tokens": 5,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 3
+    },
+    {
+      "task": "bypass",
+      "condition": "combined",
+      "cohort": "cold",
+      "exit_code": 0,
+      "elapsed_seconds": 14.11,
+      "first_response_ms": 7760.76,
+      "input_tokens": 16030,
+      "cached_input_tokens": 11008,
+      "output_tokens": 5,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null,
+        "decision_events": [],
+        "client_events": []
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 4
+    }
+  ]
+}

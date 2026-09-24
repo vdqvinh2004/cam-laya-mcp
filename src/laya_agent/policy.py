@@ -74,12 +74,46 @@ class DecisionEngine:
         self.cache: dict[str, tuple[float, dict]] = {}
         self.counts = Counter()
         self.latencies = deque(maxlen=256)
+        self.slow_until = 0.0
+        self.last_trace: dict = {}
 
     def status(self) -> dict:
         env = environment()
         return {"available": self.config.enabled and env["supported"] and env["installed"], "runtime": "mlx", "platform": env["platform"], "model_loaded": self.runtime.loaded, "version": env["version"], "latency_ms": self.latencies[-1] if self.latencies else None}
 
     def decide(self, policy: str, state: dict) -> dict:
+        started = time.perf_counter()
+        before = self.counts.copy()
+        cold_model = not self.runtime.loaded
+        self.runtime.last_load_ms = None
+        self.runtime.last_inference_ms = None
+        try:
+            result = self._decide(policy, state)
+        except Exception:
+            self.last_trace = {"outcome": "failure", "total_ms": round((time.perf_counter() - started) * 1000, 2)}
+            raise
+        if self.counts["hard_rules"] > before["hard_rules"]:
+            outcome = "hard_rule"
+        elif self.counts["cache_hits"] > before["cache_hits"]:
+            outcome = "cache"
+        elif self.counts["laya_failures"] > before["laya_failures"]:
+            outcome = "failure"
+        elif self.counts["laya_decisions"] > before["laya_decisions"]:
+            outcome = "model"
+        elif result.get("decision") == "defer_to_agent":
+            outcome = "defer"
+        else:
+            outcome = "deterministic"
+        self.last_trace = {
+            "outcome": outcome,
+            "cold_model": cold_model if outcome in {"model", "failure"} else None,
+            "model_load_ms": self.runtime.last_load_ms,
+            "inference_ms": self.runtime.last_inference_ms,
+            "total_ms": round((time.perf_counter() - started) * 1000, 2),
+        }
+        return result
+
+    def _decide(self, policy: str, state: dict) -> dict:
         if policy not in OPTIONS:
             raise ValueError("invalid policy")
         if not isinstance(state, dict):
@@ -132,6 +166,14 @@ class DecisionEngine:
                     self.counts["estimated_tokens_saved"] += tokens
             return cached[1]
         recent_latency = median(list(self.latencies)[-3:]) if len(self.latencies) >= 3 else None
+        if policy != "risk_check" and recent_latency is not None and recent_latency > 500:
+            now = time.monotonic()
+            if not self.slow_until:
+                self.slow_until = now + 30
+            if now >= self.slow_until:
+                self.latencies.clear()
+                self.slow_until = 0.0
+                recent_latency = None
         if not should_call_laya(policy, state, latency_ms=recent_latency):
             return {"decision": "defer_to_agent", "confidence": 0.0, "reason_code": "no_useful_decision"}
         question = {"type": "choice", "instructions": f"Choose the best {policy.replace('_', ' ')} for this compact coding-agent state. Reply only by selecting one criterion.", "criteria": OPTIONS[policy]}

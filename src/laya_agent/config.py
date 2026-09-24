@@ -13,7 +13,7 @@ CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 @dataclass(frozen=True)
 class Config:
-    enabled: bool = True
+    enabled: bool = False
     model: str = "aac6fef/laya-mlx"
     confidence_threshold: float = 0.55
     mandatory_safety: bool = False
@@ -46,5 +46,5 @@ def write_default(path: Path = CONFIG_FILE) -> None:
     if path.exists():
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text('enabled = true\nmodel = "aac6fef/laya-mlx"\nconfidence_threshold = 0.55\nmandatory_safety = false\ncache_ttl_seconds = 300\npreload = false\n')
+    path.write_text('enabled = false\nmodel = "aac6fef/laya-mlx"\nconfidence_threshold = 0.55\nmandatory_safety = false\ncache_ttl_seconds = 300\npreload = false\n')
     path.chmod(0o600)

@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import math
 import os
+import socket
 import subprocess
 import sys
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -44,7 +46,7 @@ def test_compact_filters_untrusted_context():
 
 def test_hard_rules_override_model():
     fake = FakeRuntime(choice="safe")
-    engine = DecisionEngine(Config(), fake)
+    engine = DecisionEngine(Config(enabled=True), fake)
     for command in ("rm -rf /", "git push --force origin main", "terraform destroy", "DROP DATABASE customers", "sudo cat /etc/passwd", "cat ~/.ssh/id_rsa", "cat .env.local", "deploy to production"):
         result = engine.decide("risk_check", {"action": command})
         assert result["requires_human"] and result["risk"] in {"high", "destructive"}
@@ -54,14 +56,22 @@ def test_hard_rules_override_model():
     assert engine.decide("risk_check", {"action": "git status"})["reason_code"] == "deterministic_safe"
 
 
-def test_decision_cache_and_failure():
+def test_model_off_by_default_keeps_hard_risk_rules():
     fake = FakeRuntime()
     engine = DecisionEngine(Config(), fake)
+    assert engine.decide("test_decision", {"current_phase": "testing"})["decision"] == "defer_to_agent"
+    assert engine.decide("risk_check", {"action": "rm -rf /"})["requires_human"]
+    assert fake.calls == 0
+
+
+def test_decision_cache_and_failure():
+    fake = FakeRuntime()
+    engine = DecisionEngine(Config(enabled=True), fake)
     state = {"current_phase": "testing", "language": "python"}
     assert engine.decide("test_decision", state)["decision"] == "targeted_test"
     assert engine.decide("test_decision", state)["decision"] == "targeted_test"
     assert fake.calls == 1 and engine.stats()["cache_hits"] == 1
-    failed = DecisionEngine(Config(), FakeRuntime(fail=True))
+    failed = DecisionEngine(Config(enabled=True), FakeRuntime(fail=True))
     assert failed.decide("test_decision", state)["decision"] == "defer_to_agent"
     failed.runtime.fail = False
     assert failed.decide("test_decision", state)["decision"] == "targeted_test"
@@ -69,15 +79,26 @@ def test_decision_cache_and_failure():
         engine.decide("invalid", state)
     with pytest.raises(ValueError):
         engine.decide("test_decision", [])
-    uncertain = DecisionEngine(Config(confidence_threshold=0.8), FakeRuntime(choice="safe", confidence=0.3))
+    uncertain = DecisionEngine(Config(enabled=True, confidence_threshold=0.8), FakeRuntime(choice="safe", confidence=0.3))
     assert uncertain.decide("risk_check", {"action": "git push origin main"})["risk"] == "unknown"
-    invalid = DecisionEngine(Config(), FakeRuntime(confidence=math.nan))
+    invalid = DecisionEngine(Config(enabled=True), FakeRuntime(confidence=math.nan))
     assert invalid.decide("test_decision", state)["decision"] == "defer_to_agent"
+
+
+def test_decision_trace_distinguishes_model_and_cache():
+    engine = DecisionEngine(Config(enabled=True), FakeRuntime())
+    state = {"current_phase": "testing", "language": "python"}
+    engine.decide("test_decision", state)
+    assert engine.last_trace["outcome"] == "model"
+    assert engine.last_trace["cold_model"] is False
+    engine.decide("test_decision", state)
+    assert engine.last_trace["outcome"] == "cache"
+    assert engine.last_trace["inference_ms"] is None
 
 
 def test_safe_task_and_risk_cache_without_secret_retention():
     route = FakeRuntime(choice="debugging")
-    engine = DecisionEngine(Config(), route)
+    engine = DecisionEngine(Config(enabled=True), route)
     task = {"request": "Fix the checkout bug", "cache_revision": "a" * 64}
     engine.decide("route_task", task)
     engine.decide("route_task", task)
@@ -91,7 +112,7 @@ def test_safe_task_and_risk_cache_without_secret_retention():
     assert all("token" not in key for key in engine.cache)
 
     risk = FakeRuntime(choice="low")
-    engine = DecisionEngine(Config(), risk)
+    engine = DecisionEngine(Config(enabled=True), risk)
     action = {"action": "git push origin main", "cache_revision": "a" * 64}
     engine.decide("risk_check", action)
     engine.decide("risk_check", action)
@@ -99,9 +120,32 @@ def test_safe_task_and_risk_cache_without_secret_retention():
     assert risk.calls == 2
 
 
+def test_mcp_route_revision_changes_with_repository_state():
+    from laya_agent import mcp_server
+
+    with patch.object(mcp_server, "project_facts", return_value={"language": "python"}), patch.object(mcp_server, "git_facts", side_effect=[{"cache_revision": "a" * 64}, {"cache_revision": "b" * 64}]), patch.object(mcp_server, "_decide", return_value={"decision": "debugging"}) as decide:
+        mcp_server.laya_route_task("Fix a test", {"scope": "small"})
+        mcp_server.laya_route_task("Fix a test", {"scope": "small"})
+    first = decide.call_args_list[0].args[1]
+    second = decide.call_args_list[1].args[1]
+    assert first["cache_revision"] != second["cache_revision"]
+    assert first["request"] == second["request"] and first["scope"] == "small"
+
+
+def test_route_cache_changes_with_context_and_model():
+    fake = FakeRuntime(choice="debugging")
+    engine = DecisionEngine(Config(enabled=True), fake)
+    state = {"request": "Fix a test", "scope": "small", "cache_revision": "a" * 64}
+    engine.decide("route_task", state)
+    engine.decide("route_task", {**state, "scope": "large"})
+    engine.config = Config(enabled=True, model="another-checkpoint")
+    engine.decide("route_task", state)
+    assert fake.calls == 3
+
+
 def test_corrupt_cache_entry_does_not_break_decision():
     fake = FakeRuntime()
-    engine = DecisionEngine(Config(), fake)
+    engine = DecisionEngine(Config(enabled=True), fake)
     state = {"current_phase": "testing"}
     engine.decide("test_decision", state)
     key = next(iter(engine.cache))
@@ -111,7 +155,7 @@ def test_corrupt_cache_entry_does_not_break_decision():
 
 
 def test_savings_only_count_explicit_avoided_call():
-    engine = DecisionEngine(Config(), FakeRuntime())
+    engine = DecisionEngine(Config(enabled=True), FakeRuntime())
     engine.decide("test_decision", {"current_phase": "testing", "language": "python"})
     assert engine.stats()["estimated_llm_calls_avoided"] == 0
     engine.decide("test_decision", {"current_phase": "testing", "language": "rust", "would_call_llm": True, "estimated_llm_tokens": 120})
@@ -120,7 +164,7 @@ def test_savings_only_count_explicit_avoided_call():
 
 
 def test_stats_count_policy_requests_and_escalations():
-    engine = DecisionEngine(Config(), FakeRuntime(choice="high"))
+    engine = DecisionEngine(Config(enabled=True), FakeRuntime(choice="high"))
     engine.decide("risk_check", {"action": "git push origin main"})
     engine.decide("risk_check", {"action": "git push origin main"})
     engine.decide("test_decision", {"last_test_result": "failed"})
@@ -131,7 +175,7 @@ def test_stats_count_policy_requests_and_escalations():
 
 
 def test_route_confidence_is_not_used_as_calibrated_threshold():
-    engine = DecisionEngine(Config(confidence_threshold=0.8), FakeRuntime(choice="debugging", confidence=0.2))
+    engine = DecisionEngine(Config(enabled=True, confidence_threshold=0.8), FakeRuntime(choice="debugging", confidence=0.2))
     result = engine.decide("route_task", {"request": "Fix the checkout bug"})
     assert result["decision"] == "debugging"
     assert result["reason_code"] == "confidence_uncalibrated"
@@ -139,9 +183,22 @@ def test_route_confidence_is_not_used_as_calibrated_threshold():
 
 def test_failed_test_routes_without_model():
     fake = FakeRuntime()
-    engine = DecisionEngine(Config(), fake)
+    engine = DecisionEngine(Config(enabled=True), fake)
     assert engine.decide("test_decision", {"last_test_result": "failed"})["decision"] == "debug_failure"
     assert fake.calls == 0
+
+
+def test_connected_socket_timeout_does_not_resend():
+    from laya_agent.daemon import request
+
+    with patch("laya_agent.daemon.socket.socket") as factory, patch("laya_agent.daemon.subprocess.Popen") as spawn:
+        connection = factory.return_value.__enter__.return_value
+        connection.recv.side_effect = socket.timeout("slow inference")
+        with pytest.raises(socket.timeout):
+            request("decide", policy="test_decision", state={"current_phase": "testing"}, timeout=0.01)
+        assert connection.sendall.call_count == 1
+        assert factory.call_count == 1
+        spawn.assert_not_called()
 
 
 def test_hooks_block_dangerous_commands_without_runtime():
@@ -154,6 +211,12 @@ def test_hooks_block_dangerous_commands_without_runtime():
     assert opencode["deny"] is True
     assert run("codex", "PreToolUse", {"tool_name": "Bash", "tool_input": {"command": "git status"}}) == {}
     assert run("opencode", "PreToolUse", {"tool_name": "read", "tool_input": {"filePath": "/repo/.env"}})["deny"]
+
+
+def test_prompt_hook_does_not_route_obvious_task():
+    with patch("laya_agent.hooks.request") as local:
+        assert run("codex", "UserPromptSubmit", {"prompt": "Fix the failing checkout test"}) == {}
+        local.assert_not_called()
 
 
 def test_hooks_use_laya_at_test_and_commit_transitions():
@@ -185,6 +248,27 @@ def test_call_policy_skips_explicitly_unneeded_or_slow_low_value_work():
     assert should_call_laya("risk_check", {"action": "git push origin main"}, latency_ms=600)
 
 
+def test_hook_skips_cold_model_without_blocking():
+    from laya_agent.hooks import _call
+
+    with patch("laya_agent.hooks.request", return_value={"model_loaded": False}) as local:
+        assert _call("review_decision", {"current_phase": "review"})["decision"] == "defer_to_agent"
+        local.assert_called_once_with("status", start=False, timeout=0.1)
+    with patch("laya_agent.hooks.request", return_value={"model_loaded": False}), patch("laya_agent.policy.load_config", return_value=Config(mandatory_safety=True)):
+        assert _call("risk_check", {"action": "git push origin main"})["requires_human"]
+
+
+def test_slow_model_gate_recovers_after_cooldown():
+    fake = FakeRuntime()
+    engine = DecisionEngine(Config(enabled=True), fake)
+    engine.latencies.extend((600, 600, 600))
+    state = {"current_phase": "testing", "scope": "unusual"}
+    assert engine.decide("test_decision", state)["decision"] == "defer_to_agent"
+    engine.slow_until = time.monotonic() - 1
+    assert engine.decide("test_decision", state)["decision"] == "targeted_test"
+    assert fake.calls == 1
+
+
 def test_mcp_tools_registered():
     assert mcp.name == "cam-laya-mcp"
     names = {tool.name for tool in asyncio.run(mcp.list_tools())}
@@ -192,7 +276,7 @@ def test_mcp_tools_registered():
 
 
 def test_repeated_decisions_have_bounded_memory():
-    engine = DecisionEngine(Config(), FakeRuntime())
+    engine = DecisionEngine(Config(enabled=True), FakeRuntime())
     for changed_files in range(1100):
         engine.decide("test_decision", {"changed_files": changed_files})
     assert len(engine.cache) <= 1024
@@ -205,7 +289,7 @@ def test_config_idempotent(tmp_path):
     before = path.read_text()
     write_default(path)
     assert path.read_text() == before
-    assert load_config(path).enabled
+    assert not load_config(path).enabled
     path.write_text('enabled = "false"\n')
     with pytest.raises(ValueError):
         load_config(path)
@@ -276,7 +360,7 @@ def test_socket_request_rejects_oversized_state():
 
 
 def test_missing_runtime_never_authorizes_hard_risk():
-    engine = DecisionEngine(Config(mandatory_safety=True), FakeRuntime(fail=True))
+    engine = DecisionEngine(Config(enabled=True, mandatory_safety=True), FakeRuntime(fail=True))
     assert engine.decide("risk_check", {"action": "git push --force origin main"})["requires_human"]
     unavailable = engine.decide("risk_check", {"action": "git push origin main"})
     assert unavailable["risk"] == "unknown" and unavailable["requires_human"]
@@ -320,3 +404,12 @@ def test_git_revision_changes_when_same_file_count_changes(tmp_path):
     assert first["cache_revision"] != second["cache_revision"]
     (tmp_path / "space name.py").write_text("c")
     assert git_facts(tmp_path)["changed_files"] == 2
+
+
+def test_git_revision_is_scoped_to_repository(tmp_path):
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    for path in (first, second):
+        path.mkdir()
+        subprocess.run(["git", "init", "-q", str(path)], check=True)
+    assert git_facts(first)["cache_revision"] != git_facts(second)["cache_revision"]

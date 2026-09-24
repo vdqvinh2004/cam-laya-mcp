@@ -7,12 +7,13 @@ from .context import git_facts, project_facts
 from .daemon import request
 from .policy import hard_risk, unavailable_decision
 
-TASK_WORD = re.compile(r"\b(implement|fix|debug|refactor|test|review|document|build|add|remove|migrate|configure|investigate)\b", re.I)
-SECRET_WORD = re.compile(r"(?i)(api.?key|password|secret|credential|token)\s*[:=]")
-
 
 def _call(policy: str, state: dict) -> dict:
     try:
+        status = request("status", start=False, timeout=0.1)
+        latency = status.get("latency_ms")
+        if not status.get("model_loaded") or not isinstance(latency, (int, float)) or latency > 500:
+            return unavailable_decision(policy, state)
         return request("decide", policy=policy, state=state, source="hook", timeout=5)
     except Exception:
         return unavailable_decision(policy, state)
@@ -21,23 +22,14 @@ def _call(policy: str, state: dict) -> dict:
 def run(client: str, event: str, payload: dict) -> dict:
     if event == "SessionStart":
         try:
-            request("preload" if load_config().preload else "status", timeout=0.5)
+            if not load_config().preload:
+                return {}
+            request("preload", timeout=0.5)
         except Exception:
             pass
         return {}
     if event == "UserPromptSubmit":
-        prompt = str(payload.get("prompt", ""))
-        if not 16 <= len(prompt) <= 320 or not TASK_WORD.search(prompt) or SECRET_WORD.search(prompt):
-            return {}
-        try:
-            request("task_changed", timeout=1)
-        except Exception:
-            pass
-        result = _call("route_task", {"request": prompt, **project_facts(), **git_facts()})
-        decision = result.get("decision")
-        if decision in {None, "defer_to_agent"}:
-            return {}
-        return _context(client, event, f"Local task route: {decision}.")
+        return {}
     if event == "PreToolUse":
         args = payload.get("tool_input") or {}
         name = str(payload.get("tool_name") or "")

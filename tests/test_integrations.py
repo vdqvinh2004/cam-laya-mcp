@@ -43,6 +43,18 @@ def test_owned_hook_path_upgrade_and_validation(tmp_path, monkeypatch):
     assert integrations.CodexAdapter().validate()["hooks"]
 
 
+def test_owned_prompt_hook_is_retired_without_touching_other_hooks(tmp_path):
+    path = tmp_path / "hooks.json"
+    path.write_text(json.dumps({"hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "other-hook"}]}]}}))
+    owned = {}
+    integrations._install_hooks(path, ["UserPromptSubmit", "PreToolUse"], "/tmp/laya", "codex", owned, "codex_hooks")
+    integrations._install_hooks(path, ["PreToolUse"], "/tmp/laya", "codex", owned, "codex_hooks")
+    commands = [h["command"] for groups in integrations._read_json(path)["hooks"].values() for group in groups for h in group["hooks"]]
+    assert "other-hook" in commands
+    assert not any(command.endswith("hook codex UserPromptSubmit") for command in commands)
+    assert integrations.CodexAdapter().capabilities()["hooks"] == ["SessionStart", "PreToolUse", "PostToolUse"]
+
+
 def test_opencode_plugin_contract():
     plugin = integrations.PLUGIN
     assert "session.created" in plugin

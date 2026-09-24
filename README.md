@@ -2,6 +2,12 @@
 
 Small local decisions for coding agents, powered by [Laya-MLX](https://github.com/mizorewww/laya-mlx). Your coding LLM still reads the repository, reasons, writes code, and explains changes. Laya-MLX chooses among short options for selected workflow transitions. It uses MLX on Apple Silicon, with no Laya cloud account, API key, or PyTorch runtime.
 
+## Project status: development paused
+
+Development is paused because completed Codex evaluations did not show a meaningful performance or cost improvement. In the 30-pair coding evaluation, the combined profile used nearly the same total tokens (2,536,378 vs. 2,543,136) and was slower by median (36.33 s vs. 29.63 s); Codex made no MCP calls or hook decisions. In the retrieval pilot, Codex also made zero calls to the optional retrieval tool across four discovery trials, even after stronger tool guidance. Model decisions remain off by default. Deterministic risk checks remain available. See the [evaluation results](docs/codex-efficacy-baseline.md) and [Milestone 6 research](specs/001-cam-laya-mcp/milestone-6-research.md).
+
+Do not expect this project to make coding agents faster or cheaper in its current form. Reconsider active development only when a client integration can reliably perform a useful action and a paired benchmark demonstrates a net benefit. Existing releases, configuration, and deterministic safety features remain usable.
+
 ## Quickstart
 
 Requires Apple Silicon, macOS 14+, Python 3.11+, and [uv](https://docs.astral.sh/uv/getting-started/installation/). On macOS with Homebrew, install uv with `brew install uv` if needed.
@@ -14,7 +20,7 @@ cam-laya-mcp setup
 cam-laya-mcp doctor
 ```
 
-Setup asks before installing missing Laya-MLX. After approval, it creates an isolated Python 3.12 runtime, downloads the checkpoint, runs a smoke decision, and configures detected Codex, Claude Code, and OpenCode installations. Then open your usual coding agent and work normally; no per-session Laya command is needed. Run `cam-laya-mcp test` for another smoke check or `cam-laya-mcp benchmark` for local timings. Running setup again is safe.
+Setup asks before installing missing Laya-MLX. After approval, it creates an isolated Python 3.12 runtime, downloads the checkpoint, runs a smoke decision, and configures detected Codex, Claude Code, and OpenCode installations. Model decisions are disabled by default because the current paired Codex evaluation did not show a token or time benefit. Deterministic risk rules still apply. Run `cam-laya-mcp enable` to opt in to model decisions, then open your coding agent. Run `cam-laya-mcp test` for another smoke check or `cam-laya-mcp benchmark` for local timings. Running setup again is safe and preserves an existing config.
 
 Already have the source checkout? Start at `cd cam-laya-mcp`. `cam-laya-mcp setup --yes` is only for automation where installation was already approved.
 
@@ -28,12 +34,12 @@ To inspect checkpoint files and resident memory on your Mac, run `du -shL ~/.cac
 
 | Client | Integration | Automatic events | Caveat |
 | --- | --- | --- | --- |
-| Codex | stdio MCP + user hooks | session start, user prompt, pre/post tool | Codex requires one-time `/hooks` trust review for new user hooks. |
-| Claude Code | stdio MCP + user hooks | session start, user prompt, pre/post tool | Hooks run only when Claude Code loads user settings. |
+| Codex | stdio MCP + user hooks | session start, pre/post tool | Codex requires one-time `/hooks` trust review for new user hooks. |
+| Claude Code | stdio MCP + user hooks | session start, pre/post tool | Hooks run only when Claude Code loads user settings. |
 | OpenCode | local MCP + JS plugin | session creation, pre/post tool | The documented plugin API has no user-prompt event. |
 | Other MCP clients | stdio MCP | none guaranteed | Their agent must choose when to call a tool. |
 
-Hooks start one on-demand Unix socket process. The model loads on the first useful decision, or at session start when `preload = true`. MCP tools use that same process. Normal read and edit work does not call Laya every time. Prompt routing applies only to short task-like prompts; pre-tool model checks apply to selected ambiguous commands; hard rules block dangerous commands without model inference. A failed test gets a deterministic debug routing hint; a passed test may request review. Codex and Claude Code can show a test and review hint before commit. OpenCode can block risky actions before a tool call and appends post-test hints to the tool result; its plugin API does not provide a reliable channel for a nonblocking precommit hint.
+Hooks start one on-demand Unix socket process. When model decisions are enabled, the model loads on the first useful decision, or at session start when `preload = true`. MCP tools use that same process. Normal read and edit work does not call Laya every time. Task routing is available through an explicit MCP call; pre-tool model checks apply to selected ambiguous commands; hard rules block dangerous commands without model inference. A failed test gets a deterministic debug routing hint; a passed test may request review. Codex and Claude Code can show a test and review hint before commit. OpenCode can block risky actions before a tool call and appends post-test hints to the tool result; its plugin API does not provide a reliable channel for a nonblocking precommit hint.
 
 Codex may show a hook trust notice after setup. Run `/hooks`, inspect the installed `laya-agent` definitions, and trust them. Until then, Codex skips those hooks. MCP registration alone never guarantees automatic tool calls.
 
@@ -43,7 +49,7 @@ OpenCode may use `OPENCODE_CONFIG_DIR` or another live config source, including 
 
 ## Example
 
-User says “Fix the checkout bug.” The coding LLM inspects the repository and writes the patch. The prompt hook may classify `debugging`. Before a risky command, the hard policy can block it. A failed `npm test` produces a short `debug` hint. After tests pass, Laya may suggest `self_review`; before commit it may suggest `targeted_test`. The LLM still does the actual debugging, testing, and review.
+User says “Fix the checkout bug.” The coding LLM inspects the repository and writes the patch. Before a risky command, the hard policy can block it. A failed `npm test` produces a short `debug` hint. After tests pass, Laya may suggest `self_review`; before commit it may suggest `targeted_test`. The LLM still does the actual debugging, testing, and review.
 
 MCP server name: `cam-laya-mcp`. Tools: `laya_status`, `laya_decide`, `laya_route_task`, `laya_risk_check`, `laya_next_action`, `laya_test_decision`, and `laya_review_decision`. All responses are small JSON objects. A generic stdio MCP entry runs `cam-laya-mcp mcp`. Keep the stdio server open for repeated calls; it forwards decisions to a warm local daemon. Call decision tools when task state changes, using short facts. A decision is guidance, not permission.
 

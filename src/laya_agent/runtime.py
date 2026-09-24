@@ -25,6 +25,8 @@ class Runtime:
         self._agent = None
         self._lock = threading.RLock()
         self.load_ms = None
+        self.last_load_ms = None
+        self.last_inference_ms = None
 
     @property
     def loaded(self) -> bool:
@@ -37,11 +39,18 @@ class Runtime:
             if self._agent is None:
                 import laya_mlx
                 start = time.perf_counter()
-                self._agent = laya_mlx.load(self.config.model, dtype="float16")
-                self.load_ms = round((time.perf_counter() - start) * 1000, 2)
+                try:
+                    self._agent = laya_mlx.load(self.config.model, dtype="float16")
+                finally:
+                    self.load_ms = self.last_load_ms = round((time.perf_counter() - start) * 1000, 2)
             return self._agent
 
     def predict(self, state: dict, question: dict) -> dict:
         with self._lock:
-            answer = self.load().predict(state, {"decision": question})
+            agent = self.load()
+            start = time.perf_counter()
+            try:
+                answer = agent.predict(state, {"decision": question})
+            finally:
+                self.last_inference_ms = round((time.perf_counter() - start) * 1000, 2)
         return answer["answers"]["decision"]

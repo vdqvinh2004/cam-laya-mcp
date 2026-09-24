@@ -1,0 +1,386 @@
+{
+  "date": "2026-09-24",
+  "model": "gpt-6-luna",
+  "method": "paired_codex_exec",
+  "conditions": "same task/model; baseline has no Laya hooks or MCP; enabled has the installed Codex hooks and this checkout MCP source in the installed MLX runtime; transcripts omitted",
+  "results": [
+    {
+      "task": "route_task",
+      "condition": "baseline",
+      "exit_code": 0,
+      "elapsed_seconds": 20.66,
+      "input_tokens": 16048,
+      "cached_input_tokens": 11008,
+      "output_tokens": 117,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "answer_marker_match": true,
+      "laya_stats_delta": {
+        "average_latency_ms": null
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "quality_ok": true
+    },
+    {
+      "task": "route_task",
+      "condition": "with_cam_laya",
+      "exit_code": 0,
+      "elapsed_seconds": 26.51,
+      "input_tokens": 16049,
+      "cached_input_tokens": 11008,
+      "output_tokens": 105,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "answer_marker_match": true,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 1,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 1,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": null
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "quality_ok": true
+    },
+    {
+      "task": "failed_test",
+      "condition": "baseline",
+      "exit_code": 0,
+      "elapsed_seconds": 28.46,
+      "input_tokens": 50066,
+      "cached_input_tokens": 41216,
+      "output_tokens": 323,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {
+        "command_execution": 1
+      },
+      "item_types": {
+        "unknown": 3,
+        "command_execution": 1
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "average_latency_ms": null
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1
+    },
+    {
+      "task": "failed_test",
+      "condition": "with_cam_laya",
+      "exit_code": 0,
+      "elapsed_seconds": 57.32,
+      "input_tokens": 51374,
+      "cached_input_tokens": 43264,
+      "output_tokens": 171,
+      "mcp_tool_calls": {
+        "laya_next_action": 1
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 1
+      },
+      "mcp_tool_outcomes": {
+        "failed_test": 1
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 1,
+        "hook_decisions": 1,
+        "mcp_decisions": 1,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 1,
+          "next_action": 1,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": 37005.66
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1
+    },
+    {
+      "task": "review_hint",
+      "condition": "baseline",
+      "exit_code": 0,
+      "elapsed_seconds": 17.41,
+      "input_tokens": 32160,
+      "cached_input_tokens": 26112,
+      "output_tokens": 128,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "average_latency_ms": null
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1
+    },
+    {
+      "task": "review_hint",
+      "condition": "with_cam_laya",
+      "exit_code": 0,
+      "elapsed_seconds": 21.52,
+      "input_tokens": 51258,
+      "cached_input_tokens": 43264,
+      "output_tokens": 147,
+      "mcp_tool_calls": {
+        "laya_review_decision": 1
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 1
+      },
+      "mcp_tool_outcomes": {
+        "low_confidence": 1
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": "post_test_hook",
+      "laya_stats_delta": {
+        "laya_decisions": 2,
+        "hook_decisions": 1,
+        "mcp_decisions": 1,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 1,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 1,
+          "risk_check": 0
+        },
+        "average_latency_ms": 12417.9
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1
+    },
+    {
+      "task": "cache_repeat",
+      "condition": "baseline",
+      "exit_code": 0,
+      "elapsed_seconds": 17.91,
+      "input_tokens": 32147,
+      "cached_input_tokens": 26112,
+      "output_tokens": 144,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "average_latency_ms": null
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1
+    },
+    {
+      "task": "cache_repeat",
+      "condition": "with_cam_laya",
+      "exit_code": 0,
+      "elapsed_seconds": 23.87,
+      "input_tokens": 48970,
+      "cached_input_tokens": 42240,
+      "output_tokens": 185,
+      "mcp_tool_calls": {
+        "laya_route_task": 2
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 2
+      },
+      "mcp_tool_outcomes": {
+        "confidence_uncalibrated": 2
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": null,
+      "laya_stats_delta": {
+        "laya_decisions": 2,
+        "hook_decisions": 1,
+        "mcp_decisions": 2,
+        "cache_hits": 1,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 3,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": 7522.76
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1
+    },
+    {
+      "task": "bypass",
+      "condition": "baseline",
+      "exit_code": 0,
+      "elapsed_seconds": 16.32,
+      "input_tokens": 16004,
+      "cached_input_tokens": 11008,
+      "output_tokens": 5,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "answer_marker_match": true,
+      "laya_stats_delta": {
+        "average_latency_ms": null
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "quality_ok": true
+    },
+    {
+      "task": "bypass",
+      "condition": "with_cam_laya",
+      "exit_code": 0,
+      "elapsed_seconds": 14.56,
+      "input_tokens": 16005,
+      "cached_input_tokens": 11008,
+      "output_tokens": 5,
+      "mcp_tool_calls": {},
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {},
+      "mcp_tool_outcomes": {},
+      "tool_calls": {},
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "answer_marker_match": true,
+      "laya_stats_delta": {
+        "laya_decisions": 0,
+        "hook_decisions": 0,
+        "mcp_decisions": 0,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 0,
+          "risk_check": 0
+        },
+        "average_latency_ms": 5809.92
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "quality_ok": true
+    }
+  ]
+}

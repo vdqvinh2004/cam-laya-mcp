@@ -1,0 +1,90 @@
+{
+  "model": "gpt-6-luna",
+  "reasoning_effort": "low",
+  "results": [
+    {
+      "task": "review_hint",
+      "condition": "combined",
+      "cohort": "cold",
+      "eligible": null,
+      "exit_code": 0,
+      "elapsed_seconds": 63.14,
+      "first_response_ms": 57869.32,
+      "input_tokens": 65416,
+      "cached_input_tokens": 54272,
+      "output_tokens": 197,
+      "mcp_tool_calls": {
+        "laya_review_decision": 1
+      },
+      "mcp_tool_errors": 0,
+      "mcp_tool_error_types": {},
+      "mcp_tool_shapes": {
+        "status=completed;keys=arguments,error,id,result,server,status,tool,type;result=dict;keys=content,structured_content;content=list;structured_keys=": 1
+      },
+      "mcp_tool_outcomes": {
+        "low_confidence": 1
+      },
+      "tool_calls": {},
+      "item_types": {
+        "unknown": 3,
+        "error": 2
+      },
+      "test_command_calls": 0,
+      "response_present": true,
+      "errors": [],
+      "quality_ok": true,
+      "answer_marker_match": true,
+      "test_evidence": "post_test_hook",
+      "laya_stats_delta": {
+        "laya_decisions": 1,
+        "hook_decisions": 0,
+        "mcp_decisions": 1,
+        "cache_hits": 0,
+        "laya_failures": 0,
+        "decisions_by_policy_delta": {
+          "route_task": 0,
+          "next_action": 0,
+          "test_decision": 0,
+          "review_decision": 1,
+          "risk_check": 0
+        },
+        "average_latency_ms": 381.55,
+        "decision_events": [
+          {
+            "time": 1790219044,
+            "invocation_id": "731472895aae49db91f2226b58faf833",
+            "run_id": "ad580e29377c4030acf69905b43d01a1",
+            "source": "mcp",
+            "policy": "review_decision",
+            "decision": "defer_to_agent",
+            "confidence": 0.0869,
+            "queue_ms": 0.0,
+            "outcome": "model",
+            "cold_model": true,
+            "model_load_ms": 36878.28,
+            "inference_ms": 381.55,
+            "total_ms": 37662.5,
+            "success": true
+          }
+        ],
+        "client_events": [
+          {
+            "run_id": "ad580e29377c4030acf69905b43d01a1",
+            "invocation_id": "731472895aae49db91f2226b58faf833",
+            "source": "mcp",
+            "policy": "review_decision",
+            "status": "completed",
+            "connect_ms": 57.11,
+            "transport_ms": 37680.36,
+            "total_ms": 37737.47
+          }
+        ]
+      },
+      "stderr_present": true,
+      "stderr_category": "other",
+      "error": null,
+      "repetition": 1,
+      "run_order": 1
+    }
+  ]
+}
