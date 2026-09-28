@@ -20,6 +20,28 @@ METRICS = STATE_DIR / "stats.json"
 PIDFILE = STATE_DIR / "agent.pid"
 
 
+def record_rule_decision(policy: str, decision: str, reason: str) -> None:
+    run_id = os.environ.get("CAM_LAYA_RUN_ID", "")
+    if not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", run_id):
+        return
+    events = STATE_DIR / "events.jsonl"
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+        STATE_DIR.chmod(0o700)
+        if events.exists() and events.stat().st_size > 1_000_000:
+            events.replace(events.with_suffix(".jsonl.1"))
+        with events.open("a") as log:
+            log.write(json.dumps({
+                "time": round(time.time()), "invocation_id": uuid.uuid4().hex,
+                "run_id": run_id, "source": "hook", "policy": policy,
+                "decision": decision, "confidence": 1.0, "outcome": "rule",
+                "reason_code": reason, "success": True,
+            }) + "\n")
+        os.chmod(events, 0o600)
+    except OSError:
+        pass
+
+
 class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         self.server.last_activity = time.monotonic()

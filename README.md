@@ -2,11 +2,11 @@
 
 Small local decisions for coding agents, powered by [Laya-MLX](https://github.com/mizorewww/laya-mlx). Your coding LLM still reads the repository, reasons, writes code, and explains changes. Laya-MLX chooses among short options for selected workflow transitions. It uses MLX on Apple Silicon, with no Laya cloud account, API key, or PyTorch runtime.
 
-## Project status: development paused
+## Project status: experimental; productivity gate not met
 
-Development is paused because completed Codex evaluations did not show a meaningful performance or cost improvement. In the 30-pair coding evaluation, the combined profile used nearly the same total tokens (2,536,378 vs. 2,543,136) and was slower by median (36.33 s vs. 29.63 s); Codex made no MCP calls or hook decisions. In the retrieval pilot, Codex also made zero calls to the optional retrieval tool across four discovery trials, even after stronger tool guidance. Model decisions remain off by default. Deterministic risk checks remain available. See the [evaluation results](docs/codex-efficacy-baseline.md) and [Milestone 6 research](specs/001-cam-laya-mcp/milestone-6-research.md).
+The corrected isolated Codex screen tested three coding tasks across baseline, full-hook, and PreToolUse+PostToolUse profiles (27 runs). Checks passed 9/9, 8/9, and 9/9, respectively. Neither hook profile showed a reliable speed gain; PreToolUse+PostToolUse used 17,469 more paired median tokens (95% CI +16,476 to +33,651). A six-pair PreToolUse-only screen was inconclusive for time and tokens. Codex billed spend was not measured. See the [evaluation report](docs/codex-efficacy-baseline.md) and [release readiness](docs/release-readiness.md).
 
-Do not expect this project to make coding agents faster or cheaper in its current form. Reconsider active development only when a client integration can reliably perform a useful action and a paired benchmark demonstrates a net benefit. Existing releases, configuration, and deterministic safety features remain usable.
+This remains an experiment, not a proven speed or cost optimization. A small 12-state screen favored deterministic rules (12/12) over raw Laya choices (4/12), so clear test/review transitions use those rules without model inference. The post-test hint increased `git diff` actions in the corrected screen (7/9 and 9/9 vs. 0/9 baseline), but a controlled Unicode-digit defect remained unfixed in all five hook trials. No post-test edits were recorded. Keep model decisions opt-in; do not claim productivity or cost gains. The latest `doctor` check found live Codex hooks/MCP and OpenCode MCP disconnected; Claude Code is not installed.
 
 ## Quickstart
 
@@ -20,7 +20,7 @@ cam-laya-mcp setup
 cam-laya-mcp doctor
 ```
 
-Setup asks before installing missing Laya-MLX. After approval, it creates an isolated Python 3.12 runtime, downloads the checkpoint, runs a smoke decision, and configures detected Codex, Claude Code, and OpenCode installations. Model decisions are disabled by default because the current paired Codex evaluation did not show a token or time benefit. Deterministic risk rules still apply. Run `cam-laya-mcp enable` to opt in to model decisions, then open your coding agent. Run `cam-laya-mcp test` for another smoke check or `cam-laya-mcp benchmark` for local timings. Running setup again is safe and preserves an existing config.
+Setup asks before installing missing Laya-MLX. After approval, it creates an isolated Python 3.12 runtime, downloads the checkpoint, runs a smoke decision, and configures detected Codex, Claude Code, and OpenCode installations. Model decisions are disabled by default because paired Codex evaluations have not shown a token or time benefit. PreToolUse risk rules remain active. Post-test guidance, including failed-test debugging and successful-test review, is off by default; set `post_test_guidance = true` in `~/.config/laya-agent/config.toml` and rerun setup to register PostToolUse hooks. Run `cam-laya-mcp enable` to try MLX for unresolved choices, then open your coding agent. Run `cam-laya-mcp test` for another smoke check or `cam-laya-mcp benchmark` for local timings. Running setup again is safe and preserves an existing config.
 
 Already have the source checkout? Start at `cd cam-laya-mcp`. `cam-laya-mcp setup --yes` is only for automation where installation was already approved.
 
@@ -34,12 +34,12 @@ To inspect checkpoint files and resident memory on your Mac, run `du -shL ~/.cac
 
 | Client | Integration | Automatic events | Caveat |
 | --- | --- | --- | --- |
-| Codex | stdio MCP + user hooks | session start, pre/post tool | Codex requires one-time `/hooks` trust review for new user hooks. |
-| Claude Code | stdio MCP + user hooks | session start, pre/post tool | Hooks run only when Claude Code loads user settings. |
-| OpenCode | local MCP + JS plugin | session creation, pre/post tool | The documented plugin API has no user-prompt event. |
+| Codex | stdio MCP + user hooks | session start, pre-tool; post-test guidance on opt-in | Codex requires one-time `/hooks` trust review for new user hooks. |
+| Claude Code | stdio MCP + user hooks | session start, pre-tool; post-test guidance on opt-in | Hooks run only when Claude Code loads user settings. |
+| OpenCode | local MCP + JS plugin | session creation, pre-tool; post-test guidance on opt-in | The documented plugin API has no user-prompt event. |
 | Other MCP clients | stdio MCP | none guaranteed | Their agent must choose when to call a tool. |
 
-Hooks start one on-demand Unix socket process. When model decisions are enabled, the model loads on the first useful decision, or at session start when `preload = true`. MCP tools use that same process. Normal read and edit work does not call Laya every time. Task routing is available through an explicit MCP call; pre-tool model checks apply to selected ambiguous commands; hard rules block dangerous commands without model inference. A failed test gets a deterministic debug routing hint; a passed test may request review. Codex and Claude Code can show a test and review hint before commit. OpenCode can block risky actions before a tool call and appends post-test hints to the tool result; its plugin API does not provide a reliable channel for a nonblocking precommit hint.
+Hooks start one on-demand Unix socket process. When model decisions are enabled, the model loads on the first unresolved decision, or at session start when `preload = true`. Clear test/review transitions use small deterministic rules; MLX handles choices without a known rule. With `post_test_guidance = true`, failed tests get a debug hint and passing tests can get a self-review hint; these hints do not load MLX by themselves. Codex and Claude Code register PostToolUse only when this setting is enabled and setup is rerun. OpenCode can block risky actions before a tool call and append enabled post-test guidance to the tool result; its plugin API does not provide a reliable channel for a nonblocking precommit hint.
 
 Codex may show a hook trust notice after setup. Run `/hooks`, inspect the installed `laya-agent` definitions, and trust them. Until then, Codex skips those hooks. MCP registration alone never guarantees automatic tool calls.
 
@@ -73,7 +73,7 @@ cam-laya-mcp uninstall
 
 `uninstall` removes only integration entries created by this tool. Optional `--remove-runtime`, `--remove-model-cache`, and `--remove-config` remove those items separately. The model cache may be shared with other tools, so it stays by default. Existing client settings are merged and backed up to `.laya-agent.bak` files. OpenCode `.jsonc` comments remain in the active file, grouped above its rewritten JSON object.
 
-User config: `~/.config/laya-agent/config.toml`. State and a local Unix socket: `~/.local/state/laya-agent/`. No prompt, command, source file, or credential value is written to the stats file. The model receives whitelisted short state facts, a short task or selected command when needed, and fixed choice labels. It receives no full conversation or repository source. Ordinary model failure returns `defer_to_agent`; failed risk checks require human review when `mandatory_safety = true`, and deterministic hard rules always apply. Confidence is a routing hint, never permission.
+User config: `~/.config/laya-agent/config.toml`. Set `post_test_guidance = true` and rerun setup to register successful-test review and failed-test debugging hints. State and a local Unix socket: `~/.local/state/laya-agent/`. No prompt, command, source file, or credential value is written to the stats file. The model receives whitelisted short state facts, a short task or selected command when needed, and fixed choice labels. It receives no full conversation or repository source. Ordinary model failure returns `defer_to_agent`; failed risk checks require human review when `mandatory_safety = true`, and deterministic hard rules always apply. Confidence is a routing hint, never permission.
 
 `stats` reports decisions by policy and source, escalations, cache hits, model failures, and latency. The local event log keeps one 1 MB backup; it contains decision metadata, never raw prompts, commands, or source. Savings remain zero unless a caller explicitly supplies `would_call_llm: true` for a decision that would otherwise need its own LLM call. The caller may also supply `estimated_llm_tokens`; these are counted under `estimated_tokens_saved`, never as exact usage. A count of Laya decisions is not a count of LLM calls avoided. `benchmark` samples the local machine; upstream published numbers are not reused as local results.
 

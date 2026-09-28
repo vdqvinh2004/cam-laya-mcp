@@ -4,15 +4,19 @@ import re
 
 from .config import load_config
 from .context import git_facts, project_facts
-from .daemon import request
-from .policy import hard_risk, unavailable_decision
+from .daemon import record_rule_decision, request
+from .policy import deterministic_choice, hard_risk, unavailable_decision
 
 
 def _call(policy: str, state: dict) -> dict:
+    if choice := deterministic_choice(policy, state):
+        reason = "failed_test" if state.get("last_test_result") == "failed" else "deterministic_rule"
+        record_rule_decision(policy, choice, reason)
+        return {"decision": choice, "confidence": 1.0, "reason_code": reason}
     try:
         status = request("status", start=False, timeout=0.1)
         latency = status.get("latency_ms")
-        if not status.get("model_loaded") or not isinstance(latency, (int, float)) or latency > 500:
+        if not status.get("model_loaded") or (isinstance(latency, (int, float)) and latency > 500):
             return unavailable_decision(policy, state)
         return request("decide", policy=policy, state=state, source="hook", timeout=5)
     except Exception:
@@ -40,7 +44,7 @@ def run(client: str, event: str, payload: dict) -> dict:
             if hard_risk(path) in {"secrets_access", "credential_manipulation"}:
                 return _deny(client, event, "secrets_access: obtain human approval before reading this file")
             return {}
-        if name not in {"Bash", "bash", "shell", "exec_command"}:
+        if name not in {"Bash", "bash", "shell", "exec_command", "command_execution"}:
             return {}
         command = str(args.get("command") or args.get("cmd") or "")
         if not command:
@@ -64,20 +68,29 @@ def run(client: str, event: str, payload: dict) -> dict:
         return _context(client, event, hint) if hint else {}
     if event == "PostToolUse":
         name = str(payload.get("tool_name") or "")
-        if name not in {"Bash", "bash", "shell", "exec_command"}:
+        if name not in {"Bash", "bash", "shell", "exec_command", "command_execution"}:
             return {}
         args = payload.get("tool_input") or {}
         command = str(args.get("command") or args.get("cmd") or "") if isinstance(args, dict) else ""
-        if not re.search(r"\b(pytest|npm\s+test|cargo\s+test|go\s+test|vitest)\b", command):
+        if not re.search(r"\b(pytest|npm\s+test|cargo\s+test|go\s+test|vitest|python(?:3(?:\.\d+)?)?\s+-m\s+unittest)\b", command):
             return {}
         response = payload.get("tool_response") or {}
         metadata = response.get("metadata") if isinstance(response, dict) else None
         exit_code = response.get("exit_code", metadata.get("exit", 0) if isinstance(metadata, dict) else 0) if isinstance(response, dict) else 0
         failed = isinstance(response, dict) and (exit_code != 0 or response.get("error"))
         if not failed:
+            if not load_config().post_test_guidance:
+                return {}
             review = _call("review_decision", {"current_phase": "review", "last_test_result": "passed", **project_facts(), **git_facts()})
             if review.get("decision") in {"self_review", "run_tests", "request_human_review"}:
-                return _context(client, event, f"Local post-test decision: {review['decision']}.")
+                hints = {
+                    "self_review": "Tests passed. Review `git diff` against the requested behavior, including edge cases the tests may not cover, before finishing.",
+                    "run_tests": "Run the relevant tests before finishing.",
+                    "request_human_review": "Tests passed. Get human review before proceeding.",
+                }
+                return _context(client, event, hints[review["decision"]])
+            return {}
+        if not load_config().post_test_guidance:
             return {}
         result = _call("next_action", {"current_phase": "debugging", "last_test_result": "failed"})
         if result.get("decision") == "debug":

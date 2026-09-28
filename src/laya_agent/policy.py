@@ -42,8 +42,46 @@ def hard_risk(action: str) -> str | None:
     return None
 
 
+def deterministic_choice(policy: str, state: dict) -> str | None:
+    if not isinstance(state, dict):
+        return None
+    changed = state.get("changed_files")
+    changed = changed if type(changed) is int and changed >= 0 else None
+    test_result = state.get("last_test_result")
+    if policy == "test_decision":
+        if test_result == "failed":
+            return "debug_failure"
+        if state.get("task_type") == "documentation":
+            return "no_test_needed"
+        if state.get("tests_available") is False:
+            return "ask_user"
+        if state.get("tests_available") is True and changed is not None:
+            return "full_suite" if changed > 10 else "targeted_test"
+    elif policy == "review_decision":
+        if state.get("risk") == "high":
+            return "request_human_review"
+        if test_result == "not_run":
+            return "run_tests"
+        if test_result == "passed" and changed is not None:
+            return "continue" if changed == 0 else "self_review"
+    elif policy == "next_action":
+        if test_result == "failed":
+            return "debug"
+        if state.get("last_action") == "edit":
+            return "test"
+        if test_result == "passed":
+            return "review"
+        if state.get("current_phase"):
+            return "inspect"
+    return None
+
+
 def unavailable_decision(policy: str, state: dict) -> dict:
     if policy != "risk_check":
+        choice = deterministic_choice(policy, state)
+        if choice:
+            reason = "failed_test" if state.get("last_test_result") == "failed" else "deterministic_rule"
+            return {"decision": choice, "confidence": 1.0, "reason_code": reason}
         return {"decision": "defer_to_agent", "confidence": 0.0, "reason_code": "runtime_unavailable"}
     reason = hard_risk(str(state.get("action", "")))
     try:

@@ -12,8 +12,8 @@ The Router supports multiple checkpoints, but this product uses one English chec
 
 | Client | MCP | Hooks | Plugins / skills | Lifecycle events used | Automatic invocation | Config location |
 | --- | --- | --- | --- | --- | --- | --- |
-| Codex | stdio | native hooks | plugins and skills available | SessionStart, UserPromptSubmit, PreToolUse, PostToolUse | hooks; first run needs trust review | `~/.codex/hooks.json`, MCP in `~/.codex/config.toml` via CLI |
-| Claude Code | stdio | native hooks | plugins and skills available | SessionStart, UserPromptSubmit, PreToolUse, PostToolUse | hooks | `~/.claude/settings.json`, user MCP via CLI |
+| Codex | stdio | native hooks | plugins and skills available | SessionStart and PreToolUse by default; PostToolUse with `post_test_guidance = true` | hooks; first run needs trust review | `~/.codex/hooks.json`, MCP in `~/.codex/config.toml` via CLI |
+| Claude Code | stdio | native hooks | plugins and skills available | SessionStart and PreToolUse by default; PostToolUse with `post_test_guidance = true` | hooks | `~/.claude/settings.json`, user MCP via CLI |
 | OpenCode | local MCP | plugin events | plugins available | session.created, tool.execute.before/after | local JS plugin | `OPENCODE_CONFIG_DIR` when set, otherwise `~/.config/opencode/opencode.json[c]` and `plugins/` |
 | Generic MCP client | client-dependent | none assumed | client-dependent | none assumed | explicit agent choice only | client-specific |
 

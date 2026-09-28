@@ -1,0 +1,30 @@
+{
+  "executable": "managed isolated cam-laya-mcp runtime",
+  "python_version": "3.12.14",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "method": "90 fresh hook processes in randomized event order; temporary XDG config and state; one dirty tracked file; direct CLI; no Codex or MCP server. Preload and model decisions disabled; PostToolUse exercises the deterministic review rule.",
+  "mlx_inference": false,
+  "events": {
+    "SessionStart": {
+      "runs": 30,
+      "median_ms": 47.48,
+      "p95_ms": 49.62,
+      "min_ms": 45.32,
+      "max_ms": 50.54
+    },
+    "PreToolUse": {
+      "runs": 30,
+      "median_ms": 47.25,
+      "p95_ms": 48.81,
+      "min_ms": 45.32,
+      "max_ms": 87.79
+    },
+    "PostToolUse": {
+      "runs": 30,
+      "median_ms": 59.15,
+      "p95_ms": 62.6,
+      "min_ms": 57.41,
+      "max_ms": 66.11
+    }
+  }
+}

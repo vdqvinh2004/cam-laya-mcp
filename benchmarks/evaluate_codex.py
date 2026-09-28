@@ -24,6 +24,14 @@ HOME = pathlib.Path.home()
 CODEX_HOME = pathlib.Path(os.environ.get("CODEX_HOME", HOME / ".codex"))
 TASKS = json.loads((ROOT / "benchmarks/codex_tasks.json").read_text())
 CODING_TASKS = json.loads((ROOT / "benchmarks/codex_coding_tasks.json").read_text())
+TEST_COMMAND = re.compile(r"\b(pytest|npm\s+test|cargo\s+test|go\s+test|vitest|python(?:3(?:\.\d+)?)?\s+-m\s+unittest)\b")
+REVIEW_COMMAND = re.compile(r"\bgit\s+diff(?:\s|$)", re.IGNORECASE)
+HOOK_PROFILES = {
+    "hooks": ("SessionStart", "PreToolUse", "PostToolUse"),
+    "hooks_session_pre": ("SessionStart", "PreToolUse"),
+    "hooks_pre_post": ("PreToolUse", "PostToolUse"),
+    "hooks_pre": ("PreToolUse",),
+}
 
 
 def toml_string(value: str) -> str:
@@ -44,51 +52,150 @@ def error_category(message: str) -> str:
     return "other" if value else "unspecified"
 
 
-def isolated_config(directory: pathlib.Path, profile: str, model: str, workdir: pathlib.Path = ROOT, reasoning_effort: str = "low") -> dict[str, str]:
+def is_laya_hook_command(command: str, binary: str) -> bool:
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        return False
+    if parts and parts[0] == "/usr/bin/env":
+        parts = parts[1:]
+        while parts and "=" in parts[0]:
+            parts = parts[1:]
+    return len(parts) == 4 and parts[0] == binary and parts[1:3] == ["hook", "codex"] and parts[3] in {"SessionStart", "PreToolUse", "PostToolUse"}
+
+
+def laya_only_hooks(hooks: dict, binary: str, prefix: str, events: tuple[str, ...] | None = None) -> dict:
+    filtered = {}
+    for event, rows in hooks.items():
+        if event == "UserPromptSubmit" or (events is not None and event not in events):
+            continue
+        selected = []
+        for row in rows:
+            commands = [
+                {**hook, "command": f"{prefix} {hook['command']}"}
+                for hook in row.get("hooks", [])
+                if is_laya_hook_command(hook.get("command", ""), binary)
+            ]
+            if commands:
+                selected.append({**{k: v for k, v in row.items() if k != "hooks"}, "hooks": commands})
+        if selected:
+            filtered[event] = selected
+    return filtered
+
+
+def audit_isolation(env: dict[str, str], profile: str, workdir: pathlib.Path, binary: str | None = None) -> dict:
+    home = pathlib.Path(env["CODEX_HOME"]).resolve()
+    hook_events = HOOK_PROFILES.get(profile, HOOK_PROFILES["hooks"] if profile == "combined" else ())
+    expected_hooks = bool(hook_events)
+    expected_hook_events = set(hook_events) or None
+    expected_servers = {"cam-laya-mcp"} if profile in {"mcp", "combined"} else set()
+    if binary is None:
+        binary = env.get("CAM_LAYA_EXECUTABLE")
+    if binary is None and (expected_hooks or expected_servers):
+        source = tomllib.loads((CODEX_HOME / "config.toml").read_text())
+        binary = str(source.get("mcp_servers", {}).get("cam-laya-mcp", {}).get("command", ""))
+    binary = binary or ""
+    config = tomllib.loads((home / "config.toml").read_text())
+    hooks_path = home / "hooks.json"
+    hooks = json.loads(hooks_path.read_text()).get("hooks", {}) if hooks_path.exists() else {}
+    commands = [hook.get("command", "") for rows in hooks.values() for row in rows for hook in row.get("hooks", [])]
+    servers = set(config.get("mcp_servers", {}))
+    hook_enabled = config.get("features", {}).get("hooks") is True
+    project_configs = [path / ".codex" for path in (workdir, *workdir.parents) if (path / ".codex").exists()]
+    problems = []
+    if home == CODEX_HOME.resolve():
+        problems.append("CODEX_HOME is not temporary")
+    if set(config) - {"model", "model_reasoning_effort", "projects", "features", "mcp_servers"}:
+        problems.append("unexpected Codex config source")
+    if servers != expected_servers:
+        problems.append(f"unexpected MCP servers: {sorted(servers)}")
+    if hook_enabled != expected_hooks or hooks_path.exists() != expected_hooks:
+        problems.append("hook setting or manifest does not match profile")
+    if config.get("features", {}).get("plugins") is not False:
+        problems.append("plugin execution is not disabled")
+    if config.get("features", {}).get("remote_plugin") is not False:
+        problems.append("remote plugin catalog is not disabled")
+    if expected_hooks and (not commands or any(not is_laya_hook_command(command, binary) for command in commands)):
+        problems.append("hook profile contains no valid cam-laya-mcp hooks or contains another command")
+    if expected_hook_events and set(hooks) != expected_hook_events:
+        problems.append(f"hook events do not match profile: {sorted(hooks)}")
+    laya_server = config.get("mcp_servers", {}).get("cam-laya-mcp", {})
+    if expected_servers and (laya_server.get("command") != "/usr/bin/env" or binary not in laya_server.get("args", [])):
+        problems.append("cam-laya-mcp server command does not match the configured executable")
+    if not expected_hooks and commands:
+        problems.append("hooks found in a hook-free profile")
+    if project_configs:
+        problems.append("project .codex config is present")
+    for key in ("XDG_CONFIG_HOME", "XDG_STATE_HOME"):
+        try:
+            pathlib.Path(env[key]).resolve().relative_to(home)
+        except (KeyError, ValueError):
+            problems.append(f"{key} is outside temporary CODEX_HOME")
+    if problems:
+        raise RuntimeError("isolation audit failed: " + "; ".join(problems))
+    return {
+        "static_pass": True,
+        "profile": profile,
+        "mcp_servers": sorted(servers),
+        "hooks_enabled": hook_enabled,
+        "plugins_disabled": True,
+        "remote_plugin_catalog_disabled": True,
+        "hook_command_count": len(commands),
+        "hook_events": sorted(hooks),
+        "hook_commands_cam_laya_only": all(is_laya_hook_command(command, binary) for command in commands),
+        "project_codex_config_absent": True,
+    }
+
+
+def isolated_config(directory: pathlib.Path, profile: str, model: str, workdir: pathlib.Path = ROOT, reasoning_effort: str = "low", laya_executable: str | None = None, post_test_guidance: bool = False) -> dict[str, str]:
     source = tomllib.loads((CODEX_HOME / "config.toml").read_text())
     laya = source.get("mcp_servers", {}).get("cam-laya-mcp")
-    hooks_enabled = profile in {"hooks", "combined"}
+    hooks_enabled = profile in HOOK_PROFILES or profile == "combined"
     mcp_enabled = profile in {"mcp", "combined"}
-    if (hooks_enabled or mcp_enabled) and not laya:
-        raise RuntimeError("Codex cam-laya-mcp entry is required")
+    binary = laya_executable or (laya or {}).get("command") or str(ROOT / ".venv/bin/cam-laya-mcp")
+    if (hooks_enabled or mcp_enabled) and not pathlib.Path(binary).is_file():
+        raise RuntimeError("cam-laya-mcp executable is required; pass --laya-executable")
+    laya_args = laya.get("args", []) if laya and not laya_executable else ["mcp"]
     (directory / "auth.json").write_bytes((CODEX_HOME / "auth.json").read_bytes())
     config = [f"model = {toml_string(model)}", f"model_reasoning_effort = {toml_string(reasoning_effort)}"]
-    config.extend(("", f"[projects.{toml_string(str(workdir))}]", 'trust_level = "trusted"', "", "[features]", f"hooks = {'true' if hooks_enabled else 'false'}"))
+    config.extend(("", f"[projects.{toml_string(str(workdir))}]", 'trust_level = "trusted"', "", "[features]", f"hooks = {'true' if hooks_enabled else 'false'}", "plugins = false", "remote_plugin = false"))
     xdg_config = directory / "xdg-config"
     xdg_state = directory / "xdg-state"
     xdg_config.mkdir()
     xdg_state.mkdir()
     source_config = pathlib.Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "laya-agent/config.toml"
+    target_config = xdg_config / "laya-agent"
+    target_config.mkdir()
     if source_config.exists():
-        target_config = xdg_config / "laya-agent"
-        target_config.mkdir()
         shutil.copyfile(source_config, target_config / "config.toml")
+    config_path = target_config / "config.toml"
+    config_lines = config_path.read_text().splitlines() if config_path.exists() else []
+    setting = f"post_test_guidance = {str(post_test_guidance).lower()}"
+    setting_line = next((i for i, line in enumerate(config_lines) if re.match(r"\s*post_test_guidance\s*=", line)), None)
+    if setting_line is None:
+        setting_line = next((i for i, line in enumerate(config_lines) if line.lstrip().startswith("[")), len(config_lines))
+        config_lines.insert(setting_line, setting)
+    else:
+        config_lines[setting_line] = setting
+    config_path.write_text("\n".join(config_lines) + "\n")
     if mcp_enabled:
         config.extend(("", '[mcp_servers."cam-laya-mcp"]', 'command = "/usr/bin/env"'))
-        args = [f"XDG_CONFIG_HOME={xdg_config}", f"XDG_STATE_HOME={xdg_state}", f"PYTHONPATH={ROOT / 'src'}", laya["command"], *laya.get("args", [])]
+        args = [f"XDG_CONFIG_HOME={xdg_config}", f"XDG_STATE_HOME={xdg_state}", f"PYTHONPATH={ROOT / 'src'}", binary, *laya_args]
         config.append("args = " + json.dumps(args))
     (directory / "config.toml").write_text("\n".join(config) + "\n")
     if hooks_enabled:
         hooks = json.loads((CODEX_HOME / "hooks.json").read_text()).get("hooks", {})
-        filtered = {}
-        binary = laya["command"]
         prefix = shlex.join(("/usr/bin/env", f"XDG_CONFIG_HOME={xdg_config}", f"XDG_STATE_HOME={xdg_state}", f"PYTHONPATH={ROOT / 'src'}"))
-        for event, rows in hooks.items():
-            if event == "UserPromptSubmit":
-                continue
-            selected = []
-            for row in rows:
-                commands = [
-                    {**hook, "command": f"{prefix} {hook['command']}"}
-                    for hook in row.get("hooks", [])
-                    if hook.get("command", "").startswith(binary + " hook ")
-                ]
-                if commands:
-                    selected.append({**{k: v for k, v in row.items() if k != "hooks"}, "hooks": commands})
-            if selected:
-                filtered[event] = selected
+        events = HOOK_PROFILES.get(profile, HOOK_PROFILES["hooks"])
+        filtered = laya_only_hooks(hooks, binary, prefix, events)
+        for event in events:
+            if event not in filtered:
+                group = {"hooks": [{"type": "command", "command": shlex.join((*shlex.split(prefix), binary, "hook", "codex", event)), "timeout": 5}]}
+                if event == "PreToolUse":
+                    group["matcher"] = "Bash|bash|exec_command|command_execution|Read|read|read_file"
+                filtered[event] = [group]
         (directory / "hooks.json").write_text(json.dumps({"hooks": filtered}))
-    return {"CODEX_HOME": str(directory), "XDG_CONFIG_HOME": str(xdg_config), "XDG_STATE_HOME": str(xdg_state)}
+    return {"CODEX_HOME": str(directory), "XDG_CONFIG_HOME": str(xdg_config), "XDG_STATE_HOME": str(xdg_state), "CAM_LAYA_EXECUTABLE": binary}
 
 
 def summarize_events(output: str) -> dict:
@@ -102,6 +209,9 @@ def summarize_events(output: str) -> dict:
     tool_counts: dict[str, int] = {}
     item_types: dict[str, int] = {}
     test_commands = 0
+    post_test_diff_actions = 0
+    post_test_file_changes = 0
+    passed_test_seen = False
     final_text = ""
     errors = []
     for line in output.splitlines():
@@ -117,6 +227,8 @@ def summarize_events(output: str) -> dict:
                     totals[key] += value
         item = event.get("item", {})
         kind = item.get("type", "unknown")
+        if kind == "file_change" and item.get("status") != "in_progress" and passed_test_seen:
+            post_test_file_changes += 1
         if kind not in {"agent_message", "reasoning", "mcp_tool_call"} and item.get("status") != "in_progress":
             item_types[kind] = item_types.get(kind, 0) + 1
         if kind != "mcp_tool_call" and item.get("status") != "in_progress" and kind in {"command_execution", "local_shell_call"}:
@@ -133,7 +245,17 @@ def summarize_events(output: str) -> dict:
                     for nested in value:
                         collect_commands(nested)
             collect_commands(item)
-            test_commands += any(re.search(r"\b(pytest|npm\s+test|cargo\s+test|go\s+test|vitest)\b", cmd) for cmd in commands)
+            test_commands += any(TEST_COMMAND.search(cmd) for cmd in commands)
+            command_succeeded = item.get("status") != "failed" and item.get("exit_code") in (None, 0)
+            for command in commands:
+                test_match = TEST_COMMAND.search(command)
+                review_match = REVIEW_COMMAND.search(command)
+                if test_match and command_succeeded:
+                    if review_match and review_match.start() > test_match.end():
+                        post_test_diff_actions += 1
+                    passed_test_seen = True
+                elif review_match and passed_test_seen:
+                    post_test_diff_actions += 1
         if kind == "mcp_tool_call":
             if item.get("status") == "in_progress":
                 continue
@@ -174,7 +296,7 @@ def summarize_events(output: str) -> dict:
             final_text = item.get("text", final_text)
         if event.get("type") == "error":
             errors.append(str(event.get("message", "error")))
-    result = {**totals, "mcp_tool_calls": tool_calls, "mcp_tool_errors": tool_errors, "mcp_tool_error_types": tool_error_types, "mcp_tool_shapes": tool_shapes, "mcp_tool_outcomes": tool_outcomes, "tool_calls": tool_counts, "item_types": item_types, "test_command_calls": test_commands, "response_present": bool(final_text.strip()), "_answer_text": final_text, "errors": errors}
+    result = {**totals, "mcp_tool_calls": tool_calls, "mcp_tool_errors": tool_errors, "mcp_tool_error_types": tool_error_types, "mcp_tool_shapes": tool_shapes, "mcp_tool_outcomes": tool_outcomes, "tool_calls": tool_counts, "item_types": item_types, "test_command_calls": test_commands, "post_test_diff_actions": post_test_diff_actions, "post_test_file_change_items": post_test_file_changes, "response_present": bool(final_text.strip()), "_answer_text": final_text, "errors": errors}
     if tool_error_details:
         result["mcp_tool_error_details"] = tool_error_details
     return result
@@ -256,16 +378,22 @@ def run_one(task: dict, profile: str, model: str, env: dict[str, str], workdir: 
     run_id = uuid.uuid4().hex
     trial_env = {**env, "CAM_LAYA_RUN_ID": run_id}
     set_trial_run_id(env, run_id)
-    command = [shutil.which("codex") or "codex", "exec", "--ephemeral", "--json", "--sandbox", "workspace-write" if "files" in task else "read-only"]
-    if "files" in task:
-        command.append("--skip-git-repo-check")
-    if profile in {"hooks", "combined"}:
+    isolation = audit_isolation(env, profile, workdir)
+    command = [shutil.which("codex") or "codex", "exec", "--ephemeral", "--json", "--strict-config", "--disable", "plugins", "--disable", "remote_plugin", "--sandbox", "workspace-write" if "files" in task else "read-only"]
+    command.append("--skip-git-repo-check")
+    if profile in {*HOOK_PROFILES, "combined"}:
         command.append("--dangerously-bypass-hook-trust")
     prompt = task["prompt"]
     if "files" not in task:
         prompt += "\nAnswer from these facts only. Do not inspect the repository or run shell commands. Call only an MCP tool explicitly requested above."
     command.extend(("-C", str(workdir), "-m", model, prompt))
     exit_code, elapsed, first_response, output, stderr = run_codex(command, trial_env)
+    try:
+        audit_isolation(env, profile, workdir)
+        isolation["post_run_static_pass"] = True
+    except RuntimeError as error:
+        isolation["post_run_static_pass"] = False
+        isolation["post_run_error"] = str(error).removeprefix("isolation audit failed: ")
     decisions, client_events = read_decisions(env, run_id) if profile != "baseline" else ([], [])
     inferences = [row["inference_ms"] for row in decisions if isinstance(row.get("inference_ms"), (int, float))]
     stats = {
@@ -280,6 +408,16 @@ def run_one(task: dict, profile: str, model: str, env: dict[str, str], workdir: 
         "client_events": client_events,
     }
     summary = summarize_events(output)
+    observed_mcp = summary["mcp_tool_calls"]
+    unexpected_mcp = observed_mcp if profile in {"baseline", *HOOK_PROFILES} else {}
+    isolation.update(
+        passed=isolation.get("post_run_static_pass", False) and not unexpected_mcp,
+        observed_mcp_tool_calls=observed_mcp,
+        unexpected_mcp_tool_calls=unexpected_mcp,
+    )
+    review_hints = [row for row in decisions if row.get("policy") == "review_decision" and row.get("decision") == "self_review"]
+    summary["review_hint_count"] = len(review_hints)
+    summary["review_action_after_hint"] = bool(review_hints and summary["post_test_diff_actions"])
     answer_text = summary.pop("_answer_text").lower()
     test_evidence = "command_event" if summary["test_command_calls"] else None
     if task["id"] == "review_hint" and not test_evidence:
@@ -292,21 +430,24 @@ def run_one(task: dict, profile: str, model: str, env: dict[str, str], workdir: 
     actual_mcp = sum(summary["mcp_tool_calls"].values())
     if "files" in task:
         check = subprocess.run(task["check"], cwd=workdir, capture_output=True, text=True, timeout=60)
+        independent_check = subprocess.run(task["independent_check"], cwd=workdir, capture_output=True, text=True, timeout=60) if task.get("independent_check") else None
         changed = {name for name, original in task["files"].items() if (workdir / name).exists() and (workdir / name).read_text() != original}
         missing = [name for name in task["files"] if not (workdir / name).exists()]
         added = [str(path.relative_to(workdir)) for path in (workdir / "bench_case").rglob("*") if path.is_file() and path.suffix == ".py" and str(path.relative_to(workdir)) not in task["files"]]
         rubric = changed == set(task["allowed_changes"]) and not missing and not added
         summary.update(check_pass=check.returncode == 0, check_exit_code=check.returncode, patch_rubric=rubric)
-        summary["quality_ok"] = exit_code == 0 and check.returncode == 0 and rubric and summary["mcp_tool_errors"] == 0
+        if independent_check is not None:
+            summary.update(independent_check_pass=independent_check.returncode == 0, independent_check_exit_code=independent_check.returncode)
+        summary["quality_ok"] = isolation["passed"] and exit_code == 0 and check.returncode == 0 and (independent_check is None or independent_check.returncode == 0) and rubric and summary["mcp_tool_errors"] == 0
         marker_match = None
         test_evidence = "runner_check"
     else:
         marker_match = task["marker"].lower() in answer_text
-        summary["quality_ok"] = marker_match and (summary["test_command_calls"] >= required_tests or test_evidence is not None) and summary["mcp_tool_errors"] == 0 and actual_mcp >= required_mcp
+        summary["quality_ok"] = isolation["passed"] and marker_match and (summary["test_command_calls"] >= required_tests or test_evidence is not None) and summary["mcp_tool_errors"] == 0 and actual_mcp >= required_mcp
     return {
         "task": task["id"], "condition": profile, "cohort": cohort, "eligible": task.get("eligible"),
         "exit_code": exit_code, "elapsed_seconds": elapsed, "first_response_ms": first_response,
-        **summary, "answer_marker_match": marker_match, "test_evidence": test_evidence, "laya_stats_delta": stats,
+        **summary, "answer_marker_match": marker_match, "test_evidence": test_evidence, "laya_stats_delta": stats, "isolation": isolation,
         "stderr_present": bool(stderr.strip()),
         "stderr_category": error_category(stderr) if stderr.strip() else None,
         "error": stderr.strip()[:500] if exit_code else None,
@@ -352,7 +493,11 @@ def prepare_coding_trial(snapshot: pathlib.Path, task: dict, destination: pathli
         path = destination / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
-    
+    subprocess.run(["git", "-C", str(destination), "add", "-A"], check=True)
+    subprocess.run([
+        "git", "-C", str(destination), "-c", "user.name=Codex benchmark", "-c", "user.email=benchmark@localhost",
+        "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "task baseline",
+    ], check=True)
 
 
 def trust_workdir(env: dict[str, str], workdir: pathlib.Path) -> None:
@@ -366,22 +511,36 @@ def main() -> None:
     parser.add_argument("--suite", choices=("diagnostic", "coding"), default="diagnostic")
     parser.add_argument("--task", action="append")
     parser.add_argument("--condition", choices=("baseline", "with_cam_laya", "all"), default="all")
-    parser.add_argument("--profiles", nargs="+", choices=("baseline", "hooks", "mcp", "combined"))
+    parser.add_argument("--profiles", nargs="+", choices=("baseline", "hooks", "hooks_session_pre", "hooks_pre_post", "hooks_pre", "mcp", "combined"))
     parser.add_argument("--cohort", choices=("mixed", "cold", "warm", "both"), default="mixed")
     parser.add_argument("--repetitions", type=int, default=1)
     parser.add_argument("--output", type=pathlib.Path, default=pathlib.Path("docs/codex-efficacy-results.json"))
     parser.add_argument("--model", default=tomllib.loads((CODEX_HOME / "config.toml").read_text()).get("model", "gpt-6-luna"))
+    parser.add_argument("--laya-executable", type=pathlib.Path)
+    parser.add_argument("--post-test-guidance", action="store_true", help="Enable post-test guidance in the isolated Laya profile")
     parser.add_argument("--reasoning-effort", choices=("low", "medium", "high", "xhigh"), default="low")
     args = parser.parse_args()
     if args.self_check:
         sample = "\n".join((
             '{"type":"turn.completed","usage":{"input_tokens":7,"cached_input_tokens":2,"output_tokens":3}}',
             '{"type":"item.completed","item":{"type":"mcp_tool_call","tool":"laya_route_task"}}',
+            '{"type":"item.completed","item":{"type":"command_execution","command":"python3 -m unittest discover -q"}}',
+            '{"type":"item.completed","item":{"type":"command_execution","command":"git diff --check","exit_code":0}}',
+            '{"type":"item.completed","item":{"type":"file_change","status":"completed"}}',
             '{"type":"item.completed","item":{"type":"agent_message","text":"ok"}}',
         ))
         parsed = summarize_events(sample)
         assert parsed["input_tokens"] == 7 and parsed["output_tokens"] == 3
-        assert parsed["mcp_tool_calls"] == {"laya_route_task": 1} and parsed["mcp_tool_errors"] == 0 and parsed["response_present"]
+        assert parsed["mcp_tool_calls"] == {"laya_route_task": 1} and parsed["mcp_tool_errors"] == 0 and parsed["response_present"] and parsed["test_command_calls"] == 1 and parsed["post_test_diff_actions"] == 1 and parsed["post_test_file_change_items"] == 1
+        before_test = summarize_events('\n'.join((
+            '{"type":"item.completed","item":{"type":"command_execution","command":"git diff"}}',
+            '{"type":"item.completed","item":{"type":"command_execution","command":"pytest","exit_code":0}}',
+        )))
+        failed_test = summarize_events('\n'.join((
+            '{"type":"item.completed","item":{"type":"command_execution","command":"pytest","exit_code":1}}',
+            '{"type":"item.completed","item":{"type":"command_execution","command":"git diff"}}',
+        )))
+        assert before_test["post_test_diff_actions"] == failed_test["post_test_diff_actions"] == 0
         with tempfile.TemporaryDirectory(prefix="cly-check-", dir="/tmp") as directory:
             events = pathlib.Path(directory) / "laya-agent/events.jsonl"
             events.parent.mkdir()
@@ -392,6 +551,54 @@ def main() -> None:
             config.write_text('args = ["XDG_CONFIG_HOME=/tmp/x", "XDG_STATE_HOME=/tmp/y", "PYTHONPATH=/tmp/z", "/tmp/laya", "mcp"]\n')
             set_trial_run_id({"CODEX_HOME": directory}, "a" * 32)
             assert tomllib.loads(config.read_text())["args"][3] == "CAM_LAYA_RUN_ID=" + "a" * 32
+            binary = "/tmp/cam-laya-mcp"
+            fake_hooks = {
+                "SessionStart": [{"hooks": [{"command": shlex.join((binary, "hook", "codex", "SessionStart"))}]}],
+                "PreToolUse": [{"hooks": [{"command": shlex.join((binary, "hook", "codex", "PreToolUse"))}]}],
+                "PostToolUse": [{"hooks": [
+                    {"command": shlex.join((binary, "hook", "codex", "PostToolUse"))},
+                    {"command": "/tmp/other-mcp hook codex PostToolUse"},
+                ]}],
+            }
+            prefix = "/usr/bin/env XDG_CONFIG_HOME=/tmp/cly-xdg"
+            full_hooks = laya_only_hooks(fake_hooks, binary, prefix, HOOK_PROFILES["hooks"])
+            filtered = laya_only_hooks(fake_hooks, binary, prefix, HOOK_PROFILES["hooks_pre_post"])
+            pre_only = laya_only_hooks(fake_hooks, binary, prefix, HOOK_PROFILES["hooks_pre"])
+            assert sum(len(row["hooks"]) for rows in full_hooks.values() for row in rows) == 3
+            assert set(filtered) == {"PreToolUse", "PostToolUse"}
+            assert sum(len(row["hooks"]) for rows in filtered.values() for row in rows) == 2
+            assert set(pre_only) == {"PreToolUse"} and sum(len(row["hooks"]) for rows in pre_only.values() for row in rows) == 1
+            assert all(is_laya_hook_command(hook["command"], binary) for rows in filtered.values() for row in rows for hook in row["hooks"])
+            for profile in ("baseline", "hooks", "hooks_session_pre", "hooks_pre_post", "hooks_pre"):
+                home = pathlib.Path(directory) / profile
+                home.mkdir()
+                workspace = pathlib.Path(directory) / f"{profile}-work"
+                workspace.mkdir()
+                (home / "xdg-config").mkdir()
+                (home / "xdg-state").mkdir()
+                (home / "config.toml").write_text(
+                    f'model = "test"\nmodel_reasoning_effort = "low"\n\n[projects.{toml_string(str(workspace))}]\ntrust_level = "trusted"\n\n[features]\nhooks = {str(profile in HOOK_PROFILES).lower()}\nplugins = false\nremote_plugin = false\n'
+                )
+                if profile != "baseline":
+                    hooks = laya_only_hooks(fake_hooks, binary, prefix, HOOK_PROFILES.get(profile, HOOK_PROFILES["hooks"]))
+                    (home / "hooks.json").write_text(json.dumps({"hooks": hooks}))
+                proof = audit_isolation({
+                    "CODEX_HOME": str(home), "XDG_CONFIG_HOME": str(home / "xdg-config"), "XDG_STATE_HOME": str(home / "xdg-state"),
+                }, profile, workspace, binary=binary)
+                assert proof["static_pass"] and proof["mcp_servers"] == []
+                assert proof["hook_command_count"] == {"baseline": 0, "hooks": 3, "hooks_session_pre": 2, "hooks_pre_post": 2, "hooks_pre": 1}[profile]
+            snapshot = pathlib.Path(directory) / "trial-snapshot"
+            snapshot.mkdir()
+            subprocess.run(["git", "init", "-q", "--template=", str(snapshot)], check=True)
+            subprocess.run([
+                "git", "-C", str(snapshot), "-c", "user.name=Codex benchmark", "-c", "user.email=benchmark@localhost",
+                "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "--allow-empty", "-qm", "baseline",
+            ], check=True)
+            trial = pathlib.Path(directory) / "trial"
+            prepare_coding_trial(snapshot, {"files": {"bench_case/sample.py": "value = 1\n"}}, trial)
+            (trial / "bench_case/sample.py").write_text("value = 2\n")
+            diff = subprocess.run(["git", "-C", str(trial), "diff", "--", "bench_case/sample.py"], check=True, capture_output=True, text=True).stdout
+            assert "value = 1" in diff and "value = 2" in diff
         print("self-check passed")
         return
     if args.repetitions < 1:
@@ -406,13 +613,18 @@ def main() -> None:
     cohorts = ("cold", "warm") if args.cohort == "both" else (args.cohort,)
     with tempfile.TemporaryDirectory(prefix="cly-", dir="/tmp") as temporary:
         snapshot = pathlib.Path(temporary) / "snapshot"
+        scratch = pathlib.Path(temporary) / "scratch"
+        scratch.mkdir()
         if args.suite == "coding":
-            shutil.copytree(ROOT, snapshot, ignore=shutil.ignore_patterns(".git", ".venv", "venv", "dist", "__pycache__", ".pytest_cache", ".ruff_cache", ".codebase-memory"))
+            shutil.copytree(ROOT, snapshot, ignore=shutil.ignore_patterns(".git", ".codex", ".venv", "venv", "dist", "__pycache__", ".pytest_cache", ".ruff_cache", ".codebase-memory", "benchmarks", "docs"))
+            subprocess.run(["git", "init", "-q", "--template=", str(snapshot)], check=True)
+            subprocess.run(["git", "-C", str(snapshot), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(snapshot), "-c", "user.name=Codex benchmark", "-c", "user.email=benchmark@localhost", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "baseline"], check=True)
         environments = {}
         for profile in profiles:
             directory = pathlib.Path(temporary) / profile
             directory.mkdir()
-            environment = {**os.environ, **isolated_config(directory, profile, args.model, reasoning_effort=args.reasoning_effort)}
+            environment = {**os.environ, **isolated_config(directory, profile, args.model, workdir=scratch, reasoning_effort=args.reasoning_effort, laya_executable=str(args.laya_executable.resolve()) if args.laya_executable else None, post_test_guidance=args.post_test_guidance)}
             environments[profile] = environment
         try:
             for repetition in range(args.repetitions):
@@ -421,7 +633,7 @@ def main() -> None:
                         offset = (repetition + task_index) % len(profiles)
                         order = (*profiles[offset:], *profiles[:offset])
                         for position, profile in enumerate(order, 1):
-                            workdir = ROOT
+                            workdir = scratch
                             if args.suite == "coding":
                                 workdir = pathlib.Path(temporary) / f"work-{len(results)}"
                                 prepare_coding_trial(snapshot, task, workdir)
@@ -439,7 +651,7 @@ def main() -> None:
                 if profile != "baseline":
                     stop_daemon(environments[profile])
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps({"model": args.model, "reasoning_effort": args.reasoning_effort, "results": results}, indent=2) + "\n")
+    args.output.write_text(json.dumps({"model": args.model, "reasoning_effort": args.reasoning_effort, "post_test_guidance": args.post_test_guidance, "results": results}, indent=2) + "\n")
     for condition in profiles:
         rows = [r for r in results if r["condition"] == condition]
         print(json.dumps({
@@ -450,6 +662,11 @@ def main() -> None:
             "output_tokens": sum(r["output_tokens"] for r in rows),
             "mcp_tool_calls": sum(sum(r["mcp_tool_calls"].values()) for r in rows),
             "test_command_calls": sum(r["test_command_calls"] for r in rows),
+            "runs_with_post_test_diff": sum(r["post_test_diff_actions"] > 0 for r in rows),
+            "runs_with_post_test_edits": sum(r["post_test_file_change_items"] > 0 for r in rows),
+            "review_hint_trials": sum(r["review_hint_count"] > 0 for r in rows),
+            "review_actions_after_hint": sum(r["review_action_after_hint"] for r in rows),
+            "independent_check_passes": sum(r.get("independent_check_pass") is True for r in rows),
             "answer_marker_matches": sum(r["answer_marker_match"] is True for r in rows),
             "quality_passes": sum(r["quality_ok"] for r in rows),
             "laya_stats": {k: sum(r["laya_stats_delta"].get(k, 0) or 0 for r in rows) for k in ("laya_decisions", "hook_decisions", "mcp_decisions", "cache_hits", "laya_failures")},

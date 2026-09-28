@@ -1,0 +1,341 @@
+{
+  "model": "gpt-6-luna",
+  "baseline": "baseline",
+  "selected": "hooks_pre",
+  "matched_pairs": 6,
+  "overall": {
+    "baseline": {
+      "runs": 6,
+      "quality_passes": 6,
+      "total_tokens": 488086,
+      "uncached_input_tokens": 50571,
+      "cached_input_tokens": 434688,
+      "output_tokens": 2827,
+      "median_elapsed_seconds": 26.565,
+      "p95_elapsed_seconds": 36.69,
+      "median_first_response_ms": 6335.64,
+      "mcp_calls": 0,
+      "hook_calls": 0,
+      "decision_outcomes": {},
+      "median_model_load_ms": null,
+      "median_inference_ms": null,
+      "median_client_total_ms": null,
+      "api_equivalent_usd": 0.01081748
+    },
+    "hooks_pre": {
+      "runs": 6,
+      "quality_passes": 6,
+      "total_tokens": 438654,
+      "uncached_input_tokens": 47695,
+      "cached_input_tokens": 388352,
+      "output_tokens": 2607,
+      "median_elapsed_seconds": 27.24,
+      "p95_elapsed_seconds": 35.49,
+      "median_first_response_ms": 6097.57,
+      "mcp_calls": 0,
+      "hook_calls": 0,
+      "decision_outcomes": {},
+      "median_model_load_ms": null,
+      "median_inference_ms": null,
+      "median_client_total_ms": null,
+      "api_equivalent_usd": 0.00995652
+    },
+    "paired_total_token_delta_median": -156.0,
+    "paired_total_token_delta_ci95": [
+      -25241.5,
+      681.5
+    ],
+    "paired_elapsed_delta_median_seconds": 1.14,
+    "paired_elapsed_delta_ci95_seconds": [
+      -9.12,
+      8.255
+    ]
+  },
+  "eligible": {
+    "baseline": {
+      "runs": 6,
+      "quality_passes": 6,
+      "total_tokens": 488086,
+      "uncached_input_tokens": 50571,
+      "cached_input_tokens": 434688,
+      "output_tokens": 2827,
+      "median_elapsed_seconds": 26.565,
+      "p95_elapsed_seconds": 36.69,
+      "median_first_response_ms": 6335.64,
+      "mcp_calls": 0,
+      "hook_calls": 0,
+      "decision_outcomes": {},
+      "median_model_load_ms": null,
+      "median_inference_ms": null,
+      "median_client_total_ms": null,
+      "api_equivalent_usd": 0.01081748
+    },
+    "hooks_pre": {
+      "runs": 6,
+      "quality_passes": 6,
+      "total_tokens": 438654,
+      "uncached_input_tokens": 47695,
+      "cached_input_tokens": 388352,
+      "output_tokens": 2607,
+      "median_elapsed_seconds": 27.24,
+      "p95_elapsed_seconds": 35.49,
+      "median_first_response_ms": 6097.57,
+      "mcp_calls": 0,
+      "hook_calls": 0,
+      "decision_outcomes": {},
+      "median_model_load_ms": null,
+      "median_inference_ms": null,
+      "median_client_total_ms": null,
+      "api_equivalent_usd": 0.00995652
+    },
+    "paired_total_token_delta_median": -156.0,
+    "paired_total_token_delta_ci95": [
+      -25241.5,
+      681.5
+    ],
+    "paired_elapsed_delta_median_seconds": 1.14,
+    "paired_elapsed_delta_ci95_seconds": [
+      -9.12,
+      8.255
+    ]
+  },
+  "bypass": {
+    "baseline": {
+      "runs": 0,
+      "quality_passes": 0,
+      "total_tokens": 0,
+      "uncached_input_tokens": 0,
+      "cached_input_tokens": 0,
+      "output_tokens": 0,
+      "median_elapsed_seconds": null,
+      "p95_elapsed_seconds": null,
+      "median_first_response_ms": null,
+      "mcp_calls": 0,
+      "hook_calls": 0,
+      "decision_outcomes": {},
+      "median_model_load_ms": null,
+      "median_inference_ms": null,
+      "median_client_total_ms": null,
+      "api_equivalent_usd": 0
+    },
+    "hooks_pre": {
+      "runs": 0,
+      "quality_passes": 0,
+      "total_tokens": 0,
+      "uncached_input_tokens": 0,
+      "cached_input_tokens": 0,
+      "output_tokens": 0,
+      "median_elapsed_seconds": null,
+      "p95_elapsed_seconds": null,
+      "median_first_response_ms": null,
+      "mcp_calls": 0,
+      "hook_calls": 0,
+      "decision_outcomes": {},
+      "median_model_load_ms": null,
+      "median_inference_ms": null,
+      "median_client_total_ms": null,
+      "api_equivalent_usd": 0
+    },
+    "paired_total_token_delta_median": null,
+    "paired_total_token_delta_ci95": null,
+    "paired_elapsed_delta_median_seconds": null,
+    "paired_elapsed_delta_ci95_seconds": null
+  },
+  "cohorts": {
+    "mixed": {
+      "baseline": {
+        "runs": 6,
+        "quality_passes": 6,
+        "total_tokens": 488086,
+        "uncached_input_tokens": 50571,
+        "cached_input_tokens": 434688,
+        "output_tokens": 2827,
+        "median_elapsed_seconds": 26.565,
+        "p95_elapsed_seconds": 36.69,
+        "median_first_response_ms": 6335.64,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.01081748
+      },
+      "hooks_pre": {
+        "runs": 6,
+        "quality_passes": 6,
+        "total_tokens": 438654,
+        "uncached_input_tokens": 47695,
+        "cached_input_tokens": 388352,
+        "output_tokens": 2607,
+        "median_elapsed_seconds": 27.24,
+        "p95_elapsed_seconds": 35.49,
+        "median_first_response_ms": 6097.57,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.00995652
+      },
+      "paired_total_token_delta_median": -156.0,
+      "paired_total_token_delta_ci95": [
+        -25241.5,
+        681.5
+      ],
+      "paired_elapsed_delta_median_seconds": 1.14,
+      "paired_elapsed_delta_ci95_seconds": [
+        -9.12,
+        8.255
+      ]
+    }
+  },
+  "tasks": {
+    "finite_percent": {
+      "baseline": {
+        "runs": 2,
+        "quality_passes": 2,
+        "total_tokens": 196100,
+        "uncached_input_tokens": 17802,
+        "cached_input_tokens": 177152,
+        "output_tokens": 1146,
+        "median_elapsed_seconds": 32.07,
+        "p95_elapsed_seconds": 36.69,
+        "median_first_response_ms": 5495.01,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.00412472
+      },
+      "hooks_pre": {
+        "runs": 2,
+        "quality_passes": 2,
+        "total_tokens": 162322,
+        "uncached_input_tokens": 16648,
+        "cached_input_tokens": 144896,
+        "output_tokens": 778,
+        "median_elapsed_seconds": 30.085,
+        "p95_elapsed_seconds": 35.49,
+        "median_first_response_ms": 7212.13,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.00350276
+      },
+      "paired_total_token_delta_median": -16889.0,
+      "paired_total_token_delta_ci95": [
+        -33516.0,
+        -262.0
+      ],
+      "paired_elapsed_delta_median_seconds": -1.985,
+      "paired_elapsed_delta_ci95_seconds": [
+        -12.01,
+        8.04
+      ]
+    },
+    "retry_review": {
+      "baseline": {
+        "runs": 2,
+        "quality_passes": 2,
+        "total_tokens": 178714,
+        "uncached_input_tokens": 17837,
+        "cached_input_tokens": 160000,
+        "output_tokens": 877,
+        "median_elapsed_seconds": 26.635,
+        "p95_elapsed_seconds": 29.61,
+        "median_first_response_ms": 5912.74,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.0038222
+      },
+      "hooks_pre": {
+        "runs": 2,
+        "quality_passes": 2,
+        "total_tokens": 162935,
+        "uncached_input_tokens": 17047,
+        "cached_input_tokens": 144896,
+        "output_tokens": 992,
+        "median_elapsed_seconds": 26.59,
+        "p95_elapsed_seconds": 29.8,
+        "median_first_response_ms": 6379.52,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.00364966
+      },
+      "paired_total_token_delta_median": -7889.5,
+      "paired_total_token_delta_ci95": [
+        -16967.0,
+        1188.0
+      ],
+      "paired_elapsed_delta_median_seconds": -0.045,
+      "paired_elapsed_delta_ci95_seconds": [
+        -6.23,
+        6.14
+      ]
+    },
+    "strict_port": {
+      "baseline": {
+        "runs": 2,
+        "quality_passes": 2,
+        "total_tokens": 113272,
+        "uncached_input_tokens": 14932,
+        "cached_input_tokens": 97536,
+        "output_tokens": 804,
+        "median_elapsed_seconds": 23.53,
+        "p95_elapsed_seconds": 25.68,
+        "median_first_response_ms": 7626.27,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.00287056
+      },
+      "hooks_pre": {
+        "runs": 2,
+        "quality_passes": 2,
+        "total_tokens": 113397,
+        "uncached_input_tokens": 14000,
+        "cached_input_tokens": 98560,
+        "output_tokens": 837,
+        "median_elapsed_seconds": 25.835,
+        "p95_elapsed_seconds": 34.15,
+        "median_first_response_ms": 5435.79,
+        "mcp_calls": 0,
+        "hook_calls": 0,
+        "decision_outcomes": {},
+        "median_model_load_ms": null,
+        "median_inference_ms": null,
+        "median_client_total_ms": null,
+        "api_equivalent_usd": 0.0028041
+      },
+      "paired_total_token_delta_median": 62.5,
+      "paired_total_token_delta_ci95": [
+        -50.0,
+        175.0
+      ],
+      "paired_elapsed_delta_median_seconds": 2.305,
+      "paired_elapsed_delta_ci95_seconds": [
+        -3.86,
+        8.47
+      ]
+    }
+  },
+  "api_price_source": "https://developers.openai.com/api/docs/pricing (2026-09-24, Standard short context; illustration only)"
+}

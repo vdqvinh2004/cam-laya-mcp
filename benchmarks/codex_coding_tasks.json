@@ -64,5 +64,61 @@
     },
     "allowed_changes": ["bench_case/scope.py"],
     "check": ["python3", "-m", "unittest", "discover", "-s", "bench_case", "-p", "test_scope.py", "-q"]
+  },
+  {
+    "id": "strict_port",
+    "eligible": true,
+    "prompt": "Fix parse_port in bench_case/strict_port.py to accept surrounding whitespace and ASCII decimal digits only, returning an integer from 1 through 65535. Invalid inputs must raise ValueError. Edit only that file, run python3 -m unittest discover -s bench_case -p test_strict_port.py -q, and report the result.",
+    "files": {
+      "bench_case/strict_port.py": "def parse_port(text):\n    return int(text)\n",
+      "bench_case/test_strict_port.py": "import unittest\nfrom strict_port import parse_port\n\nclass StrictPortTests(unittest.TestCase):\n    def test_valid(self):\n        self.assertEqual(parse_port(' 443 '), 443)\n    def test_invalid(self):\n        for value in ('0', '65536', 'abc'):\n            with self.assertRaises(ValueError):\n                parse_port(value)\n"
+    },
+    "allowed_changes": [
+      "bench_case/strict_port.py"
+    ],
+    "check": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "bench_case",
+      "-p",
+      "test_strict_port.py",
+      "-q"
+    ],
+    "independent_check": [
+      "python3",
+      "-c",
+      "import sys; sys.path.insert(0, 'bench_case'); from strict_port import parse_port; assert parse_port('\\t00080\\n') == 80; bad = ('+80', '-80', '８０', ' '); exec(\"for value in bad:\\n try: parse_port(value)\\n except ValueError: pass\\n else: raise AssertionError(value)\")"
+    ]
+  },
+  {
+    "id": "finite_percent",
+    "eligible": true,
+    "prompt": "Fix parse_percent in bench_case/finite_percent.py to accept finite percentage values from 0 through 100, including the endpoints, and reject invalid input with ValueError. Edit only that file, run python3 -m unittest discover -s bench_case -p test_finite_percent.py -q, and report the result.",
+    "files": {
+      "bench_case/finite_percent.py": "def parse_percent(value):\n    return float(value)\n",
+      "bench_case/test_finite_percent.py": "import unittest\nfrom finite_percent import parse_percent\n\nclass FinitePercentTests(unittest.TestCase):\n    def test_valid(self):\n        self.assertEqual(parse_percent(' 25.5 '), 25.5)\n        self.assertEqual(parse_percent('0'), 0)\n        self.assertEqual(parse_percent('100'), 100)\n    def test_invalid(self):\n        for value in ('-1', '101', 'abc'):\n            with self.assertRaises(ValueError):\n                parse_percent(value)\n"
+    },
+    "allowed_changes": [
+      "bench_case/finite_percent.py"
+    ],
+    "check": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "bench_case",
+      "-p",
+      "test_finite_percent.py",
+      "-q"
+    ],
+    "independent_check": [
+      "python3",
+      "-c",
+      "import sys; sys.path.insert(0, 'bench_case'); from finite_percent import parse_percent; assert parse_percent(' 25.5 ') == 25.5; bad = ('nan', 'inf', '-inf', '1e309'); exec(\"for value in bad:\\n try: parse_percent(value)\\n except ValueError: pass\\n else: raise AssertionError(value)\")"
+    ]
   }
 ]

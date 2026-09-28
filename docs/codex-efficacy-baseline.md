@@ -79,6 +79,94 @@ The local search helper found an expected path in the top three results for all 
 
 The full paired evaluation was stopped at the planned adoption gate. These pilot samples do not establish a token or time effect. They do show that MCP registration and server guidance alone did not make the agent use the proposed action. The prototype was removed; no retrieval efficiency claim or default tool enablement follows from this experiment.
 
-## Project decision
+## Previous project decision (before the deterministic fallback)
 
-Pause active development. Across the completed evaluations, the current MCP advice pattern did not demonstrate agent performance or cost gains: the combined coding profile was 6,758 tokens lower in aggregate, but the paired token interval crossed zero, median elapsed time increased by 6.70 seconds, and agents made zero MCP calls and hook decisions during coding. The retrieval pilot also failed its adoption gate with zero tool calls across four discovery trials. Keep model inference disabled by default and retain deterministic risk checks. Resume performance work only when a client integration can reliably execute a useful action and a paired benchmark demonstrates net benefit.
+The latest 36-run warm paired pilot does not meet the release gate for productivity or cost claims. Keep model inference opt-in, retain deterministic risk checks, improve model decision usefulness and client adoption, then repeat the paired evaluation. This result supersedes the earlier stop decision above; it does not establish a speed or token benefit.
+
+## Pre-fallback warm paired pilot (superseded)
+
+Six coding tasks ran three paired repetitions each with `gpt-6-luna`, low reasoning effort, and a warm MLX runtime (36 runs total). The combined profile passed 17/18 checks vs. 16/18 baseline; the eligible subset passed 8/9 in each profile. Both profiles had a 20.05 s median elapsed time. Paired time change was −1.04 s (95% CI −2.54 to +2.15 s); paired token change was −1,308 (95% CI −16,620 to +8,808). The time interval crosses zero and the observed median does not meet the 10% target. Codex API spend was not measured. Raw run data: [`codex-efficacy-results.json`](codex-efficacy-results.json).
+
+Across the combined runs, Laya recorded 36 hook decisions: 3 `review_decision` model calls and 33 cache hits. All 3 model calls returned `defer_to_agent` with 0.083 confidence; warm inference took 123–230 ms. This pilot still fails the release gate for productivity or cost claims.
+
+## Deterministic fallback update
+
+After the pre-fallback pilot, the 12-state screen's deterministic rules were moved into shared policy and made the fast path for clear test/review transitions. Those rules matched all 12 expected labels; raw Laya choices matched 4/12. The screen is small and hand-labeled, so it supports a controlled hybrid experiment, not a general accuracy claim.
+
+## Latest paired pilot: deterministic fallback
+
+Six coding tasks ran three paired repetitions each with `gpt-6-luna`, low reasoning effort, and a warm local runtime (36 runs). Model decisions were enabled only in the temporary pilot config. Codex hooks and MCP were installed under a temporary `CODEX_HOME`; no live client config was changed. Each disposable coding snapshot now gets a clean local Git baseline before task files are overlaid, so hooks can observe task-level changed-file counts.
+
+| Measure | Baseline | Combined |
+| --- | ---: | ---: |
+| Check and patch passes | 18/18 | 18/18 |
+| Total tokens | 1,443,460 | 1,364,857 |
+| Median elapsed time | 17.66 s | 17.36 s |
+| Illustrative API-equivalent cost | $0.03206 | $0.03160 |
+
+The paired median time change was +0.035 s (95% bootstrap CI -2.680 to +2.825 s). The paired token change was -2,129.5 (95% CI -17,336 to +2,270.5). Both intervals include zero. The eligible nine pairs all passed; their median time was 19.27 s baseline and 19.66 s combined, with paired time change +0.98 s (95% CI -5.4 to +4.6 s). The 10% time target and token-savings gate remain unmet. The dollar figures use published short-context API rates and are not Codex billing data.
+
+The combined profile made 27 test-command calls and zero MCP calls. The artifact recorded zero daemon-backed hook decisions. At pilot time, deterministic hook returns bypassed the event logger, so these records cannot tell how many rule hints Codex received. A privacy-safe rule event is now logged for future evaluations; the pilot result remains a profile-level comparison without reliable rule-level attribution. Raw records: [`codex-efficacy-deterministic-pilot.json`](codex-efficacy-deterministic-pilot.json). Summary: [`codex-efficacy-deterministic-pilot-summary.json`](codex-efficacy-deterministic-pilot-summary.json).
+
+A one-task `retry_review` smoke then ran through the temporary Codex profile. Codex executed one test command; the passing post-test hook logged `review_decision=self_review` with `source=hook` and `outcome=rule`, and the independent task check passed. This verified hook execution; it did not measure whether the agent acted on the hint. The temporary trace and auth copy were removed.
+
+## Post-test hint adoption screen
+
+The first three-pair screen used the abstract `Local post-test decision: self_review.` message. Codex ran an explicit `git diff` after a successful test in 0/3 baseline and 0/3 hook trials. Hook logs showed 2–3 review hints per run. Raw data: [`codex-review-adoption-pilot.json`](codex-review-adoption-pilot.json).
+
+The follow-up changed the hint to a direct instruction: “Tests passed. Review `git diff` for unintended changes before finishing.” Across three paired `retry_review` runs, all six independent patch checks passed. Codex ran `git diff` after a successful test in 3/3 hook trials and 0/3 baseline trials; each hook trial logged two `self_review` hints. A neutral `stable_paths` task whose prompt did not mention review produced a post-test `git diff` in 2/3 hook trials and 0/3 baseline trials; all six checks passed. A further two-task screen (`strict_port`, `finite_percent`) yielded a `git diff` in 5/6 hook trials vs. 0/6 baseline. Across all four tasks, the action signal is 10/12 vs. 0/12. Raw data: [`codex-review-adoption-followup.json`](codex-review-adoption-followup.json), [`codex-review-adoption-heldout.json`](codex-review-adoption-heldout.json), and [`codex-review-quality-pilot.json`](codex-review-quality-pilot.json).
+
+## Independent review-quality screen
+
+The `strict_port` and `finite_percent` tasks ran independent edge checks after Codex finished: reject signed or non-ASCII port digits, and reject NaN/infinite percentages. Those checks passed in 12/12 runs across the earlier screen, with no post-test edits. A later controlled screen injected a Unicode-digit defect after visible tests passed. The visible check passed in 10/10 runs, but the independent check failed in 10/10; the Laya review hint prompted `git diff` in 4/5 hook runs and no run corrected the defect. Baseline prompted no `git diff` and also corrected none. This is evidence of hint adoption, not review quality. Raw data: [`codex-review-quality-pilot.json`](codex-review-quality-pilot.json) and [`codex-review-defect-followup.json`](codex-review-defect-followup.json).
+
+## Current project decision
+
+The project is not ready to claim faster coding or lower cost. The corrected screen found no reliable speed gain, one full-hook quality miss, and a significant token increase for PreToolUse+PostToolUse; the smaller PreToolUse-only screen was inconclusive. The injected Unicode-digit defect remained unfixed in all five review-hook trials. Post-test guidance and PostToolUse registration are now disabled by default; set `post_test_guidance = true` and rerun setup to opt in. Model decisions remain opt-in. Re-enable post-test guidance by default only after a controlled repeat shows it catches and fixes reviewable defects without a material cost penalty.
+
+## Strict hook-isolation follow-up
+
+The evaluator now builds each profile under a temporary `CODEX_HOME`, uses an empty scratch workspace, excludes `.codex` from coding snapshots, disables Codex plugins and the remote plugin catalog in both config and CLI flags, and audits the profile before and after each run. The [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference) says the remote plugin catalog is enabled by default. An earlier attempt that disabled only that catalog still populated plugin cache files; those runs were discarded. No live Codex config was changed.
+
+Three eligible coding tasks (`retry_review`, `strict_port`, `finite_percent`) ran once per profile. All six pre-run and post-run audits passed. Baseline had zero hooks and zero MCP servers. The hook-only profile had three commands, each validated as `cam-laya-mcp hook codex <event>`, zero MCP servers, disabled plugins, and zero observed MCP calls. A self-check injects a fake third-party hook and confirms the profile builder removes it. Raw data: [`codex-isolation-pilot.json`](codex-isolation-pilot.json).
+
+All six patch and independent checks passed; neither profile recorded a post-test edit. Codex ran `git diff` after a passing test in 3/3 hook trials and 1/3 baseline trials, with no defect caught. Median elapsed time was 24.18 s with hooks versus 20.32 s baseline (+19%); total input tokens were 260,914 versus 226,669 (+15%). This small rule-only screen shows no speed or token benefit and does not measure MLX inference or Codex billed cost.
+
+## Corrected isolated hook screen
+
+The evaluator accepts `--laya-executable` and builds a disposable manifest containing only Laya hooks. It leaves the live profile untouched and audits hook events, MCP servers, and plugin settings before and after every trial. The corrected 27-run screen committed each task fixture into its Git baseline; this supersedes the earlier screen, whose untracked fixtures made `git diff` counts unreliable. Three eligible coding tasks ran three repetitions in baseline, full-hook, and PreToolUse+PostToolUse profiles. All 27 isolation audits passed. Baseline had zero hooks and MCP servers. Hook profiles used only cam-laya-mcp commands, with zero MCP servers and zero MCP calls. All 18 applicable independent edge checks passed; the `retry_review` task has no independent edge check.
+
+| Profile | Hook events | Patch/check quality | Edge checks | Median elapsed | Total tokens | `git diff` after test |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Baseline | none | 9/9 | 6/6 | 28.12 s | 649,630 | 0/9 |
+| Three Laya hooks | SessionStart, PreToolUse, PostToolUse | 8/9 | 6/6 | 29.46 s | 701,446 | 7/9 |
+| Safety + review hooks | PreToolUse, PostToolUse | 9/9 | 6/6 | 33.29 s | 849,795 | 9/9 |
+
+The full-hook profile had one `retry_review` run that failed its visible check and patch rubric. No post-test edits were recorded. Paired median time changed by +0.75 s (95% bootstrap CI -5.45 to +7.14) with all hooks, and +2.93 s (-1.84 to +18.44) without `SessionStart`. Paired token change was +326 (-15,855 to +17,457) and +17,469 (+16,476 to +33,651), respectively. The PreToolUse+PostToolUse profile therefore used more tokens in this screen; neither profile showed a reliable speed gain. The review action appeared in 7/9 full-hook runs and 9/9 PreToolUse+PostToolUse runs, versus 0/9 baseline runs. The successful-test hint was unconditional in these trials; post-test guidance is now available only by opt-in. The separate injected-defect screen above found no correction, so these actions do not establish review benefit. No trial invoked MCP or the MLX model. API-equivalent estimates were $0.0156 baseline, $0.0173 full hooks, and $0.0188 PreToolUse+PostToolUse; these are not Codex bills. Raw runs: [`codex-hook-event-followup.json`](codex-hook-event-followup.json). Summary: [`codex-hook-event-followup-summary.json`](codex-hook-event-followup-summary.json).
+
+## PreToolUse-only follow-up
+
+To separate the safety hook from the post-test review hint, three eligible coding tasks ran two matched repetitions with baseline and a PreToolUse-only profile (12 runs). Every run-level pre/post isolation audit passed. Baseline had no hooks or MCP servers; the hook profile manifest had one cam-laya-mcp `PreToolUse` command, no MCP servers, and no other hook commands. All visible checks passed (6/6 per profile); all applicable edge checks passed (4/4 per profile). Neither profile prompted a post-test `git diff` or recorded an edit. Laya recorded no policy decisions and Codex made no MCP calls.
+
+| Profile | Runs | Quality | Median elapsed | Total tokens | API-equivalent estimate |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 6 | 6/6 | 26.565 s | 488,086 | $0.01082 |
+| PreToolUse only | 6 | 6/6 | 27.240 s | 438,654 | $0.00996 |
+
+Paired median time changed by +1.14 s (95% bootstrap CI -9.12 to +8.255); paired total tokens changed by -156 (-25,241.5 to +681.5). Both intervals include zero. This small screen shows no reliable speed or token gain. API-equivalent estimates are not Codex bills. Raw runs: [`codex-hook-pre-only-followup.json`](codex-hook-pre-only-followup.json). Summary: [`codex-hook-pre-only-followup-summary.json`](codex-hook-pre-only-followup-summary.json).
+
+## PostToolUse registration with guidance disabled
+
+An exploratory three-pair screen kept PreToolUse and PostToolUse registered while disabling the successful-test hint. All six pre-run and post-run audits passed; visible checks passed 3/3 per profile, applicable edge checks passed 2/2, and there were no MCP calls, Laya decisions, review hints, or post-test edits. Despite the silent handler, paired median time changed by +10.48 s (95% bootstrap CI +2.44 to +12.47) and total tokens by +16,491 (+16,459 to +49,038). This is one run per task, so it does not establish the cause; alongside the PreToolUse-only screen, it suggests the PostToolUse registration itself adds overhead. Default Codex and Claude setup now registers only SessionStart and PreToolUse. Set `post_test_guidance = true` and rerun setup to opt in to PostToolUse. Raw runs: [`codex-post-event-no-guidance-check.json`](codex-post-event-no-guidance-check.json). Summary: [`codex-post-event-no-guidance-summary.json`](codex-post-event-no-guidance-summary.json).
+
+## Default Codex install profile follow-up
+
+A six-pair exploratory screen compared baseline with the current default profile (SessionStart + PreToolUse). Isolation audits passed: baseline had zero hooks/MCP, and the hook profile contained only cam-laya-mcp hooks with no other MCP servers or calls.
+
+- Quality passed 5/6 baseline runs and 6/6 default-profile runs. The baseline `retry_review` miss was not linked to a Laya decision; this small screen does not demonstrate a quality benefit.
+- Paired median elapsed-time change was +0.455 s (95% CI −4.55 to +8.59); paired median total-token change was −11 (95% CI −24,249.5 to +24,529). Both intervals cross zero, so this screen shows no reliable speed or cost effect.
+- Raw data: `docs/codex-default-profile-followup.json`; summary: `docs/codex-default-profile-followup-summary.json`.
+
+## Direct hook startup microbench
+
+Thirty fresh invocations per event used the managed Python 3.12.14 executable in randomized order, with temporary config/state and a dirty tracked file. Median process time was 47.48 ms for `SessionStart`, 47.25 ms for a safe `PreToolUse` command, and 59.15 ms for the deterministic post-test review path. The run made no Codex or MCP calls and loaded no MLX model. This puts the default no-preload `SessionStart` cost near 50 ms per Codex session; the paired task screen did not show that dropping it improves end-to-end performance, so keep the registration as-is. Details: [`codex-hook-startup-microbench.json`](codex-hook-startup-microbench.json).

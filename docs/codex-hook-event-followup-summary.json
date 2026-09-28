@@ -1,0 +1,791 @@
+{
+  "model": "gpt-6-luna",
+  "reasoning_effort": "low",
+  "laya_executable": "managed isolated runtime, Python 3.12.14",
+  "python_version": "3.12.14",
+  "tasks": [
+    "retry_review",
+    "strict_port",
+    "finite_percent"
+  ],
+  "repetitions_per_task_profile": 3,
+  "profiles": {
+    "baseline": {
+      "runs": 9,
+      "median_elapsed_seconds": 28.12,
+      "median_first_response_ms": 6216.37,
+      "total_input_tokens": 645751,
+      "total_tokens": 649630,
+      "quality_passes": 9,
+      "post_test_diff_trials": 0,
+      "review_hint_trials": 0,
+      "hook_decisions": 0,
+      "mcp_calls": 0,
+      "independent_check_passes": 6,
+      "independent_check_applicable": 6,
+      "pre_and_post_isolation_passes": 9,
+      "hook_manifest": {
+        "commands": 0,
+        "events": []
+      },
+      "api_equivalent_usd": 0.01555012
+    },
+    "hooks": {
+      "runs": 9,
+      "median_elapsed_seconds": 29.46,
+      "median_first_response_ms": 6373.97,
+      "total_input_tokens": 697127,
+      "total_tokens": 701446,
+      "quality_passes": 8,
+      "post_test_diff_trials": 7,
+      "review_hint_trials": 8,
+      "hook_decisions": 13,
+      "mcp_calls": 0,
+      "independent_check_passes": 6,
+      "independent_check_applicable": 6,
+      "pre_and_post_isolation_passes": 9,
+      "hook_manifest": {
+        "commands": 3,
+        "events": [
+          "PostToolUse",
+          "PreToolUse",
+          "SessionStart"
+        ]
+      },
+      "api_equivalent_usd": 0.01729044
+    },
+    "hooks_pre_post": {
+      "runs": 9,
+      "median_elapsed_seconds": 33.29,
+      "median_first_response_ms": 6578.05,
+      "total_input_tokens": 845131,
+      "total_tokens": 849795,
+      "quality_passes": 9,
+      "post_test_diff_trials": 9,
+      "review_hint_trials": 9,
+      "hook_decisions": 13,
+      "mcp_calls": 0,
+      "independent_check_passes": 6,
+      "independent_check_applicable": 6,
+      "pre_and_post_isolation_passes": 9,
+      "hook_manifest": {
+        "commands": 2,
+        "events": [
+          "PostToolUse",
+          "PreToolUse"
+        ]
+      },
+      "api_equivalent_usd": 0.01883102
+    }
+  },
+  "paired_vs_baseline": {
+    "hooks": {
+      "model": "gpt-6-luna",
+      "baseline": "baseline",
+      "selected": "hooks",
+      "matched_pairs": 9,
+      "overall": {
+        "baseline": {
+          "runs": 9,
+          "quality_passes": 9,
+          "total_tokens": 649630,
+          "uncached_input_tokens": 79479,
+          "cached_input_tokens": 566272,
+          "output_tokens": 3879,
+          "median_elapsed_seconds": 28.12,
+          "p95_elapsed_seconds": 73.69,
+          "median_first_response_ms": 6216.37,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01555012
+        },
+        "hooks": {
+          "runs": 9,
+          "quality_passes": 8,
+          "total_tokens": 701446,
+          "uncached_input_tokens": 90663,
+          "cached_input_tokens": 606464,
+          "output_tokens": 4319,
+          "median_elapsed_seconds": 29.46,
+          "p95_elapsed_seconds": 58.85,
+          "median_first_response_ms": 6373.97,
+          "mcp_calls": 0,
+          "hook_calls": 13,
+          "decision_outcomes": {
+            "rule": 13
+          },
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01729044
+        },
+        "paired_total_token_delta_median": 326,
+        "paired_total_token_delta_ci95": [
+          -15855,
+          17457
+        ],
+        "paired_elapsed_delta_median_seconds": 0.75,
+        "paired_elapsed_delta_ci95_seconds": [
+          -5.45,
+          7.14
+        ]
+      },
+      "eligible": {
+        "baseline": {
+          "runs": 9,
+          "quality_passes": 9,
+          "total_tokens": 649630,
+          "uncached_input_tokens": 79479,
+          "cached_input_tokens": 566272,
+          "output_tokens": 3879,
+          "median_elapsed_seconds": 28.12,
+          "p95_elapsed_seconds": 73.69,
+          "median_first_response_ms": 6216.37,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01555012
+        },
+        "hooks": {
+          "runs": 9,
+          "quality_passes": 8,
+          "total_tokens": 701446,
+          "uncached_input_tokens": 90663,
+          "cached_input_tokens": 606464,
+          "output_tokens": 4319,
+          "median_elapsed_seconds": 29.46,
+          "p95_elapsed_seconds": 58.85,
+          "median_first_response_ms": 6373.97,
+          "mcp_calls": 0,
+          "hook_calls": 13,
+          "decision_outcomes": {
+            "rule": 13
+          },
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01729044
+        },
+        "paired_total_token_delta_median": 326,
+        "paired_total_token_delta_ci95": [
+          -15855,
+          17457
+        ],
+        "paired_elapsed_delta_median_seconds": 0.75,
+        "paired_elapsed_delta_ci95_seconds": [
+          -5.45,
+          7.14
+        ]
+      },
+      "bypass": {
+        "baseline": {
+          "runs": 0,
+          "quality_passes": 0,
+          "total_tokens": 0,
+          "uncached_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "median_elapsed_seconds": null,
+          "p95_elapsed_seconds": null,
+          "median_first_response_ms": null,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0
+        },
+        "hooks": {
+          "runs": 0,
+          "quality_passes": 0,
+          "total_tokens": 0,
+          "uncached_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "median_elapsed_seconds": null,
+          "p95_elapsed_seconds": null,
+          "median_first_response_ms": null,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0
+        },
+        "paired_total_token_delta_median": null,
+        "paired_total_token_delta_ci95": null,
+        "paired_elapsed_delta_median_seconds": null,
+        "paired_elapsed_delta_ci95_seconds": null
+      },
+      "cohorts": {
+        "mixed": {
+          "baseline": {
+            "runs": 9,
+            "quality_passes": 9,
+            "total_tokens": 649630,
+            "uncached_input_tokens": 79479,
+            "cached_input_tokens": 566272,
+            "output_tokens": 3879,
+            "median_elapsed_seconds": 28.12,
+            "p95_elapsed_seconds": 73.69,
+            "median_first_response_ms": 6216.37,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.01555012
+          },
+          "hooks": {
+            "runs": 9,
+            "quality_passes": 8,
+            "total_tokens": 701446,
+            "uncached_input_tokens": 90663,
+            "cached_input_tokens": 606464,
+            "output_tokens": 4319,
+            "median_elapsed_seconds": 29.46,
+            "p95_elapsed_seconds": 58.85,
+            "median_first_response_ms": 6373.97,
+            "mcp_calls": 0,
+            "hook_calls": 13,
+            "decision_outcomes": {
+              "rule": 13
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.01729044
+          },
+          "paired_total_token_delta_median": 326,
+          "paired_total_token_delta_ci95": [
+            -15855,
+            17457
+          ],
+          "paired_elapsed_delta_median_seconds": 0.75,
+          "paired_elapsed_delta_ci95_seconds": [
+            -5.45,
+            7.14
+          ]
+        }
+      },
+      "tasks": {
+        "finite_percent": {
+          "baseline": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 178140,
+            "uncached_input_tokens": 26242,
+            "cached_input_tokens": 150784,
+            "output_tokens": 1114,
+            "median_elapsed_seconds": 28.12,
+            "p95_elapsed_seconds": 30.63,
+            "median_first_response_ms": 5743.94,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00468904
+          },
+          "hooks": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 211610,
+            "uncached_input_tokens": 27301,
+            "cached_input_tokens": 183040,
+            "output_tokens": 1269,
+            "median_elapsed_seconds": 28.35,
+            "p95_elapsed_seconds": 29.46,
+            "median_first_response_ms": 6373.97,
+            "mcp_calls": 0,
+            "hook_calls": 3,
+            "decision_outcomes": {
+              "rule": 3
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.005195
+          },
+          "paired_total_token_delta_median": 326,
+          "paired_total_token_delta_ci95": [
+            -172,
+            33316
+          ],
+          "paired_elapsed_delta_median_seconds": 0.23,
+          "paired_elapsed_delta_ci95_seconds": [
+            -5.45,
+            3.23
+          ]
+        },
+        "retry_review": {
+          "baseline": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 260942,
+            "uncached_input_tokens": 30095,
+            "cached_input_tokens": 229376,
+            "output_tokens": 1471,
+            "median_elapsed_seconds": 38.29,
+            "p95_elapsed_seconds": 73.69,
+            "median_first_response_ms": 7731.97,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00603876
+          },
+          "hooks": {
+            "runs": 3,
+            "quality_passes": 2,
+            "total_tokens": 294717,
+            "uncached_input_tokens": 36554,
+            "cached_input_tokens": 256512,
+            "output_tokens": 1651,
+            "median_elapsed_seconds": 39.04,
+            "p95_elapsed_seconds": 58.85,
+            "median_first_response_ms": 7966.2,
+            "mcp_calls": 0,
+            "hook_calls": 7,
+            "decision_outcomes": {
+              "rule": 7
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00704602
+          },
+          "paired_total_token_delta_median": 16463,
+          "paired_total_token_delta_ci95": [
+            -145,
+            17457
+          ],
+          "paired_elapsed_delta_median_seconds": -2.23,
+          "paired_elapsed_delta_ci95_seconds": [
+            -14.84,
+            0.75
+          ]
+        },
+        "strict_port": {
+          "baseline": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 210548,
+            "uncached_input_tokens": 23142,
+            "cached_input_tokens": 186112,
+            "output_tokens": 1294,
+            "median_elapsed_seconds": 21.14,
+            "p95_elapsed_seconds": 28.35,
+            "median_first_response_ms": 5040.16,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00482232
+          },
+          "hooks": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 195119,
+            "uncached_input_tokens": 26808,
+            "cached_input_tokens": 166912,
+            "output_tokens": 1399,
+            "median_elapsed_seconds": 31.06,
+            "p95_elapsed_seconds": 35.49,
+            "median_first_response_ms": 6295.5,
+            "mcp_calls": 0,
+            "hook_calls": 3,
+            "decision_outcomes": {
+              "rule": 3
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00504942
+          },
+          "paired_total_token_delta_median": -15855,
+          "paired_total_token_delta_ci95": [
+            -16191,
+            16617
+          ],
+          "paired_elapsed_delta_median_seconds": 7.14,
+          "paired_elapsed_delta_ci95_seconds": [
+            4.89,
+            9.92
+          ]
+        }
+      },
+      "api_price_source": "https://developers.openai.com/api/docs/pricing (2026-09-24, Standard short context; illustration only)"
+    },
+    "hooks_pre_post": {
+      "model": "gpt-6-luna",
+      "baseline": "baseline",
+      "selected": "hooks_pre_post",
+      "matched_pairs": 9,
+      "overall": {
+        "baseline": {
+          "runs": 9,
+          "quality_passes": 9,
+          "total_tokens": 649630,
+          "uncached_input_tokens": 79479,
+          "cached_input_tokens": 566272,
+          "output_tokens": 3879,
+          "median_elapsed_seconds": 28.12,
+          "p95_elapsed_seconds": 73.69,
+          "median_first_response_ms": 6216.37,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01555012
+        },
+        "hooks_pre_post": {
+          "runs": 9,
+          "quality_passes": 9,
+          "total_tokens": 849795,
+          "uncached_input_tokens": 89419,
+          "cached_input_tokens": 755712,
+          "output_tokens": 4664,
+          "median_elapsed_seconds": 33.29,
+          "p95_elapsed_seconds": 70.1,
+          "median_first_response_ms": 6578.05,
+          "mcp_calls": 0,
+          "hook_calls": 13,
+          "decision_outcomes": {
+            "rule": 13
+          },
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01883102
+        },
+        "paired_total_token_delta_median": 17469,
+        "paired_total_token_delta_ci95": [
+          16476,
+          33651
+        ],
+        "paired_elapsed_delta_median_seconds": 2.93,
+        "paired_elapsed_delta_ci95_seconds": [
+          -1.84,
+          18.44
+        ]
+      },
+      "eligible": {
+        "baseline": {
+          "runs": 9,
+          "quality_passes": 9,
+          "total_tokens": 649630,
+          "uncached_input_tokens": 79479,
+          "cached_input_tokens": 566272,
+          "output_tokens": 3879,
+          "median_elapsed_seconds": 28.12,
+          "p95_elapsed_seconds": 73.69,
+          "median_first_response_ms": 6216.37,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01555012
+        },
+        "hooks_pre_post": {
+          "runs": 9,
+          "quality_passes": 9,
+          "total_tokens": 849795,
+          "uncached_input_tokens": 89419,
+          "cached_input_tokens": 755712,
+          "output_tokens": 4664,
+          "median_elapsed_seconds": 33.29,
+          "p95_elapsed_seconds": 70.1,
+          "median_first_response_ms": 6578.05,
+          "mcp_calls": 0,
+          "hook_calls": 13,
+          "decision_outcomes": {
+            "rule": 13
+          },
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0.01883102
+        },
+        "paired_total_token_delta_median": 17469,
+        "paired_total_token_delta_ci95": [
+          16476,
+          33651
+        ],
+        "paired_elapsed_delta_median_seconds": 2.93,
+        "paired_elapsed_delta_ci95_seconds": [
+          -1.84,
+          18.44
+        ]
+      },
+      "bypass": {
+        "baseline": {
+          "runs": 0,
+          "quality_passes": 0,
+          "total_tokens": 0,
+          "uncached_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "median_elapsed_seconds": null,
+          "p95_elapsed_seconds": null,
+          "median_first_response_ms": null,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0
+        },
+        "hooks_pre_post": {
+          "runs": 0,
+          "quality_passes": 0,
+          "total_tokens": 0,
+          "uncached_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "median_elapsed_seconds": null,
+          "p95_elapsed_seconds": null,
+          "median_first_response_ms": null,
+          "mcp_calls": 0,
+          "hook_calls": 0,
+          "decision_outcomes": {},
+          "median_model_load_ms": null,
+          "median_inference_ms": null,
+          "median_client_total_ms": null,
+          "api_equivalent_usd": 0
+        },
+        "paired_total_token_delta_median": null,
+        "paired_total_token_delta_ci95": null,
+        "paired_elapsed_delta_median_seconds": null,
+        "paired_elapsed_delta_ci95_seconds": null
+      },
+      "cohorts": {
+        "mixed": {
+          "baseline": {
+            "runs": 9,
+            "quality_passes": 9,
+            "total_tokens": 649630,
+            "uncached_input_tokens": 79479,
+            "cached_input_tokens": 566272,
+            "output_tokens": 3879,
+            "median_elapsed_seconds": 28.12,
+            "p95_elapsed_seconds": 73.69,
+            "median_first_response_ms": 6216.37,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.01555012
+          },
+          "hooks_pre_post": {
+            "runs": 9,
+            "quality_passes": 9,
+            "total_tokens": 849795,
+            "uncached_input_tokens": 89419,
+            "cached_input_tokens": 755712,
+            "output_tokens": 4664,
+            "median_elapsed_seconds": 33.29,
+            "p95_elapsed_seconds": 70.1,
+            "median_first_response_ms": 6578.05,
+            "mcp_calls": 0,
+            "hook_calls": 13,
+            "decision_outcomes": {
+              "rule": 13
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.01883102
+          },
+          "paired_total_token_delta_median": 17469,
+          "paired_total_token_delta_ci95": [
+            16476,
+            33651
+          ],
+          "paired_elapsed_delta_median_seconds": 2.93,
+          "paired_elapsed_delta_ci95_seconds": [
+            -1.84,
+            18.44
+          ]
+        }
+      },
+      "tasks": {
+        "finite_percent": {
+          "baseline": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 178140,
+            "uncached_input_tokens": 26242,
+            "cached_input_tokens": 150784,
+            "output_tokens": 1114,
+            "median_elapsed_seconds": 28.12,
+            "p95_elapsed_seconds": 30.63,
+            "median_first_response_ms": 5743.94,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00468904
+          },
+          "hooks_pre_post": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 277288,
+            "uncached_input_tokens": 27223,
+            "cached_input_tokens": 248576,
+            "output_tokens": 1489,
+            "median_elapsed_seconds": 32.78,
+            "p95_elapsed_seconds": 44.67,
+            "median_first_response_ms": 5462.53,
+            "mcp_calls": 0,
+            "hook_calls": 3,
+            "decision_outcomes": {
+              "rule": 3
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00595256
+          },
+          "paired_total_token_delta_median": 33571,
+          "paired_total_token_delta_ci95": [
+            16499,
+            49078
+          ],
+          "paired_elapsed_delta_median_seconds": 2.15,
+          "paired_elapsed_delta_ci95_seconds": [
+            0.86,
+            18.44
+          ]
+        },
+        "retry_review": {
+          "baseline": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 260942,
+            "uncached_input_tokens": 30095,
+            "cached_input_tokens": 229376,
+            "output_tokens": 1471,
+            "median_elapsed_seconds": 38.29,
+            "p95_elapsed_seconds": 73.69,
+            "median_first_response_ms": 7731.97,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00603876
+          },
+          "hooks_pre_post": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 344345,
+            "uncached_input_tokens": 38744,
+            "cached_input_tokens": 303872,
+            "output_tokens": 1729,
+            "median_elapsed_seconds": 65.04,
+            "p95_elapsed_seconds": 70.1,
+            "median_first_response_ms": 7456.7,
+            "mcp_calls": 0,
+            "hook_calls": 7,
+            "decision_outcomes": {
+              "rule": 7
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00777762
+          },
+          "paired_total_token_delta_median": 32283,
+          "paired_total_token_delta_ci95": [
+            17469,
+            33651
+          ],
+          "paired_elapsed_delta_median_seconds": 6.39,
+          "paired_elapsed_delta_ci95_seconds": [
+            -3.59,
+            26.75
+          ]
+        },
+        "strict_port": {
+          "baseline": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 210548,
+            "uncached_input_tokens": 23142,
+            "cached_input_tokens": 186112,
+            "output_tokens": 1294,
+            "median_elapsed_seconds": 21.14,
+            "p95_elapsed_seconds": 28.35,
+            "median_first_response_ms": 5040.16,
+            "mcp_calls": 0,
+            "hook_calls": 0,
+            "decision_outcomes": {},
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00482232
+          },
+          "hooks_pre_post": {
+            "runs": 3,
+            "quality_passes": 3,
+            "total_tokens": 228162,
+            "uncached_input_tokens": 23452,
+            "cached_input_tokens": 203264,
+            "output_tokens": 1446,
+            "median_elapsed_seconds": 26.51,
+            "p95_elapsed_seconds": 38.04,
+            "median_first_response_ms": 6065.16,
+            "mcp_calls": 0,
+            "hook_calls": 3,
+            "decision_outcomes": {
+              "rule": 3
+            },
+            "median_model_load_ms": null,
+            "median_inference_ms": null,
+            "median_client_total_ms": null,
+            "api_equivalent_usd": 0.00510084
+          },
+          "paired_total_token_delta_median": 16476,
+          "paired_total_token_delta_ci95": [
+            -15523,
+            16661
+          ],
+          "paired_elapsed_delta_median_seconds": 2.93,
+          "paired_elapsed_delta_ci95_seconds": [
+            -1.84,
+            16.9
+          ]
+        }
+      },
+      "api_price_source": "https://developers.openai.com/api/docs/pricing (2026-09-24, Standard short context; illustration only)"
+    }
+  },
+  "method": "Three eligible coding tasks ran three counterbalanced repetitions in baseline, three-hook, and PreToolUse+PostToolUse profiles. Each task fixture was committed into its disposable Git baseline. Every run used a temporary CODEX_HOME, plugins and remote plugin catalog disabled, and pre-run plus post-run isolation audits. Baseline had zero hooks and MCP servers; hook profiles contained only cam-laya-mcp hook commands and zero MCP servers. Independent edge checks apply to strict_port and finite_percent only.",
+  "limitations": "Small single-machine screen with three tasks and one model. One full-hook retry_review run failed its visible check and patch rubric. Review-action counts measure git diff commands, not defect detection. No post-test edits were recorded. Codex billed cost and transcripts were not collected; API-equivalent estimates are illustrative only."
+}

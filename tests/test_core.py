@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import math
 import os
 import socket
 import subprocess
 import sys
 import time
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -16,7 +18,7 @@ from laya_agent.config import Config, load_config, write_default
 from laya_agent.context import compact, fingerprint, git_facts, project_facts
 from laya_agent.hooks import run
 from laya_agent.mcp_server import mcp
-from laya_agent.policy import DecisionEngine, hard_risk, should_call_laya
+from laya_agent.policy import DecisionEngine, deterministic_choice, hard_risk, should_call_laya
 
 
 class FakeRuntime:
@@ -42,6 +44,11 @@ def test_compact_filters_untrusted_context():
     with pytest.raises(ValueError):
         compact(["wrong"])
     assert "changed_files" not in compact({"changed_files": math.nan})
+
+
+def test_deterministic_rules_match_screened_decision_cases():
+    cases = json.loads((Path(__file__).resolve().parents[1] / "benchmarks/decision_cases.json").read_text())
+    assert [deterministic_choice(case["policy"], case["state"]) for case in cases] == [case["expected"] for case in cases]
 
 
 def test_hard_rules_override_model():
@@ -220,12 +227,53 @@ def test_prompt_hook_does_not_route_obvious_task():
 
 
 def test_hooks_use_laya_at_test_and_commit_transitions():
-    with patch("laya_agent.hooks._call", side_effect=lambda policy, state: {"decision": "targeted_test" if policy == "test_decision" else "self_review"}), patch("laya_agent.hooks.project_facts", return_value={"tests_available": True}), patch("laya_agent.hooks.git_facts", return_value={"changed_files": 2}):
+    from laya_agent.config import Config
+
+    with patch("laya_agent.hooks.load_config", return_value=Config(post_test_guidance=True)), patch("laya_agent.hooks._call", side_effect=lambda policy, state: {"decision": "targeted_test" if policy == "test_decision" else "self_review"}), patch("laya_agent.hooks.project_facts", return_value={"tests_available": True}), patch("laya_agent.hooks.git_facts", return_value={"changed_files": 2}):
         commit = run("codex", "PreToolUse", {"tool_name": "Bash", "tool_input": {"command": "git commit -m fix"}})
         assert "targeted_test" in commit["hookSpecificOutput"]["additionalContext"]
         passed = run("codex", "PostToolUse", {"tool_name": "Bash", "tool_input": {"command": "pytest"}, "tool_response": {"exit_code": 0}})
-        assert "self_review" in passed["hookSpecificOutput"]["additionalContext"]
+        assert "Review `git diff`" in passed["hookSpecificOutput"]["additionalContext"]
+        unittest = run("codex", "PostToolUse", {"tool_name": "Bash", "tool_input": {"command": "python3 -m unittest discover -q"}, "tool_response": {"exit_code": 0}})
+        assert "Review `git diff`" in unittest["hookSpecificOutput"]["additionalContext"]
+        codex_command = run("codex", "PostToolUse", {"tool_name": "command_execution", "tool_input": {"command": "python3 -m unittest discover -q"}, "tool_response": {"exit_code": 0}})
+        assert "Review `git diff`" in codex_command["hookSpecificOutput"]["additionalContext"]
         assert run("codex", "PostToolUse", {"tool_name": "Bash", "tool_input": {"command": "git status"}, "tool_response": {"exit_code": 0}}) == {}
+
+
+def test_post_test_guidance_uses_rules_without_loading_model(monkeypatch, tmp_path):
+    from laya_agent import daemon
+    from laya_agent.config import Config
+
+    monkeypatch.setattr(daemon, "STATE_DIR", tmp_path)
+    monkeypatch.setenv("CAM_LAYA_RUN_ID", "pilot-1")
+    with patch("laya_agent.hooks.load_config", return_value=Config(post_test_guidance=True)), patch("laya_agent.hooks.request") as local, patch("laya_agent.hooks.project_facts", return_value={"tests_available": True}), patch("laya_agent.hooks.git_facts", return_value={"changed_files": 2}):
+        result = run("codex", "PostToolUse", {"tool_name": "command_execution", "tool_input": {"command": "pytest"}, "tool_response": {"exit_code": 0}})
+    assert result["hookSpecificOutput"]["additionalContext"] == "Tests passed. Review `git diff` against the requested behavior, including edge cases the tests may not cover, before finishing."
+    local.assert_not_called()
+    event = json.loads((tmp_path / "events.jsonl").read_text())
+    assert (event["run_id"], event["source"], event["policy"], event["decision"], event["outcome"]) == ("pilot-1", "hook", "review_decision", "self_review", "rule")
+    assert "state" not in event and (tmp_path / "events.jsonl").stat().st_mode & 0o077 == 0
+
+
+def test_post_test_guidance_is_disabled_by_default():
+    from laya_agent.config import Config
+
+    with patch("laya_agent.hooks.load_config", return_value=Config()) as config, patch("laya_agent.hooks._call") as local:
+        result = run("codex", "PostToolUse", {"tool_name": "Bash", "tool_input": {"command": "pytest"}, "tool_response": {"exit_code": 0}})
+    assert result == {}
+    config.assert_called_once_with()
+    local.assert_not_called()
+
+
+def test_disabled_post_test_guidance_skips_failed_test_hint():
+    from laya_agent.config import Config
+
+    with patch("laya_agent.hooks.load_config", return_value=Config()) as config, patch("laya_agent.hooks._call") as local:
+        result = run("codex", "PostToolUse", {"tool_name": "Bash", "tool_input": {"command": "pytest"}, "tool_response": {"exit_code": 1}})
+    assert result == {}
+    config.assert_called_once_with()
+    local.assert_not_called()
 
 
 def test_opencode_skips_precommit_hint_it_cannot_deliver():
@@ -235,8 +283,10 @@ def test_opencode_skips_precommit_hint_it_cannot_deliver():
 
 
 def test_opencode_shell_risk_and_test_result():
+    from laya_agent.config import Config
+
     assert run("opencode", "PreToolUse", {"tool_name": "shell", "tool_input": {"command": "rm -rf /tmp/example"}})["deny"]
-    with patch("laya_agent.hooks._call", return_value={"decision": "debug"}) as decide:
+    with patch("laya_agent.hooks.load_config", return_value=Config(post_test_guidance=True)), patch("laya_agent.hooks._call", return_value={"decision": "debug"}) as decide:
         result = run("opencode", "PostToolUse", {"tool_name": "shell", "tool_input": {"command": "pytest"}, "tool_response": {"output": "failed", "metadata": {"exit": 1}}})
     assert result["context"] == "Local decision: debug the failed test before proceeding."
     decide.assert_called_once_with("next_action", {"current_phase": "debugging", "last_test_result": "failed"})
@@ -252,6 +302,12 @@ def test_hook_skips_cold_model_without_blocking():
     from laya_agent.hooks import _call
 
     with patch("laya_agent.hooks.request", return_value={"model_loaded": False}) as local:
+        assert _call("review_decision", {"current_phase": "review"})["decision"] == "defer_to_agent"
+        local.assert_called_once_with("status", start=False, timeout=0.1)
+    with patch("laya_agent.hooks.request", side_effect=[{"model_loaded": True, "latency_ms": None}, {"decision": "self_review"}]) as local:
+        assert _call("review_decision", {"current_phase": "review"})["decision"] == "self_review"
+        assert local.call_count == 2
+    with patch("laya_agent.hooks.request", return_value={"model_loaded": True, "latency_ms": 600}) as local:
         assert _call("review_decision", {"current_phase": "review"})["decision"] == "defer_to_agent"
         local.assert_called_once_with("status", start=False, timeout=0.1)
     with patch("laya_agent.hooks.request", return_value={"model_loaded": False}), patch("laya_agent.policy.load_config", return_value=Config(mandatory_safety=True)):
@@ -290,7 +346,11 @@ def test_config_idempotent(tmp_path):
     write_default(path)
     assert path.read_text() == before
     assert not load_config(path).enabled
+    assert not load_config(path).post_test_guidance
     path.write_text('enabled = "false"\n')
+    with pytest.raises(ValueError):
+        load_config(path)
+    path.write_text('post_test_guidance = "false"\n')
     with pytest.raises(ValueError):
         load_config(path)
 

@@ -17,6 +17,7 @@ class Config:
     model: str = "aac6fef/laya-mlx"
     confidence_threshold: float = 0.55
     mandatory_safety: bool = False
+    post_test_guidance: bool = False
     cache_ttl_seconds: int = 300
     preload: bool = False
 
@@ -27,7 +28,7 @@ def load_config(path: Path = CONFIG_FILE) -> Config:
     except FileNotFoundError:
         return Config()
     values = {k: v for k, v in raw.items() if k in Config.__dataclass_fields__}
-    for key in ("enabled", "mandatory_safety", "preload"):
+    for key in ("enabled", "mandatory_safety", "post_test_guidance", "preload"):
         if key in values and type(values[key]) is not bool:
             raise ValueError(f"{key} must be a boolean")
     if "model" in values and (not isinstance(values["model"], str) or not values["model"]):
@@ -46,5 +47,5 @@ def write_default(path: Path = CONFIG_FILE) -> None:
     if path.exists():
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text('enabled = false\nmodel = "aac6fef/laya-mlx"\nconfidence_threshold = 0.55\nmandatory_safety = false\ncache_ttl_seconds = 300\npreload = false\n')
+    path.write_text('enabled = false\nmodel = "aac6fef/laya-mlx"\nconfidence_threshold = 0.55\nmandatory_safety = false\npost_test_guidance = false\ncache_ttl_seconds = 300\npreload = false\n')
     path.chmod(0o600)

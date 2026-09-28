@@ -13,30 +13,15 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from laya_agent.config import load_config  # noqa: E402
-from laya_agent.policy import DecisionEngine  # noqa: E402
+from laya_agent.policy import DecisionEngine, deterministic_choice  # noqa: E402
 from laya_agent.runtime import Runtime  # noqa: E402
 
 
 def simple_rule(policy: str, state: dict) -> str:
-    if policy == "test_decision":
-        if state.get("last_test_result") == "failed":
-            return "debug_failure"
-        if state.get("task_type") == "documentation":
-            return "no_test_needed"
-        if state.get("tests_available") is False:
-            return "ask_user"
-        return "full_suite" if state.get("changed_files", 0) > 10 else "targeted_test"
-    if policy == "review_decision":
-        if state.get("risk") == "high":
-            return "request_human_review"
-        if state.get("last_test_result") == "not_run":
-            return "run_tests"
-        return "continue" if state.get("changed_files") == 0 else "self_review"
-    if state.get("last_test_result") == "failed":
-        return "debug"
-    if state.get("last_action") == "edit":
-        return "test"
-    return "review" if state.get("last_test_result") == "passed" else "inspect"
+    choice = deterministic_choice(policy, state)
+    if choice is None:
+        raise ValueError(f"No deterministic baseline for {policy}")
+    return choice
 
 
 def main() -> None:

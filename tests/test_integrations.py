@@ -43,7 +43,10 @@ def test_owned_hook_path_upgrade_and_validation(tmp_path, monkeypatch):
     assert integrations.CodexAdapter().validate()["hooks"]
 
 
-def test_owned_prompt_hook_is_retired_without_touching_other_hooks(tmp_path):
+def test_owned_prompt_hook_is_retired_without_touching_other_hooks(tmp_path, monkeypatch):
+    from laya_agent.config import Config
+
+    monkeypatch.setattr(integrations, "load_config", lambda: Config())
     path = tmp_path / "hooks.json"
     path.write_text(json.dumps({"hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "other-hook"}]}]}}))
     owned = {}
@@ -52,7 +55,7 @@ def test_owned_prompt_hook_is_retired_without_touching_other_hooks(tmp_path):
     commands = [h["command"] for groups in integrations._read_json(path)["hooks"].values() for group in groups for h in group["hooks"]]
     assert "other-hook" in commands
     assert not any(command.endswith("hook codex UserPromptSubmit") for command in commands)
-    assert integrations.CodexAdapter().capabilities()["hooks"] == ["SessionStart", "PreToolUse", "PostToolUse"]
+    assert integrations.CodexAdapter().capabilities()["hooks"] == ["SessionStart", "PreToolUse"]
 
 
 def test_opencode_plugin_contract():
@@ -169,6 +172,49 @@ def test_codex_adapter_owns_only_its_entries(tmp_path, monkeypatch):
     assert integrations._read_json(hooks)["hooks"]["SessionStart"][0]["hooks"][0]["command"] == "user-start"
 
 
+def test_codex_uses_codex_home_for_hooks(tmp_path, monkeypatch):
+    from laya_agent.config import Config
+
+    post_test_guidance = False
+    monkeypatch.setattr(integrations, "load_config", lambda: Config(post_test_guidance=post_test_guidance))
+    codex_home = tmp_path / "custom-codex-home"
+    hooks = codex_home / "hooks.json"
+    fallback_hooks = tmp_path / "default-hooks.json"
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    monkeypatch.setattr(integrations, "CODEX_HOOKS", fallback_hooks)
+    monkeypatch.setattr(integrations, "MANIFEST", tmp_path / "installed.json")
+    monkeypatch.setattr(integrations.CodexAdapter, "detect", lambda self: True)
+    mcp_installed = False
+
+    def fake_run(args, **kwargs):
+        nonlocal mcp_installed
+        args = tuple(args)
+        if args[:3] == ("codex", "mcp", "get"):
+            return SimpleNamespace(returncode=0 if mcp_installed else 1, stdout="command: /tmp/cam-laya-mcp\nargs: mcp")
+        if args[:3] == ("codex", "mcp", "add"):
+            mcp_installed = True
+        elif args[:3] == ("codex", "mcp", "remove"):
+            mcp_installed = False
+        return SimpleNamespace(returncode=0, stdout="")
+
+    monkeypatch.setattr(integrations.subprocess, "run", fake_run)
+    adapter = integrations.CodexAdapter()
+    adapter.install("/tmp/cam-laya-mcp")
+    assert hooks.exists() and not fallback_hooks.exists()
+    assert set(json.loads(hooks.read_text())["hooks"]) == {"SessionStart", "PreToolUse"}
+    assert adapter.capabilities()["config"] == str(hooks)
+    assert adapter.capabilities()["hooks"] == ["SessionStart", "PreToolUse"]
+    assert adapter.validate()["installed"]
+    post_test_guidance = True
+    adapter.install("/tmp/cam-laya-mcp")
+    assert set(json.loads(hooks.read_text())["hooks"]) == {"SessionStart", "PreToolUse", "PostToolUse"}
+    post_test_guidance = False
+    adapter.install("/tmp/cam-laya-mcp")
+    assert set(json.loads(hooks.read_text())["hooks"]) == {"SessionStart", "PreToolUse"}
+    adapter.uninstall()
+    assert "codex" not in hooks.read_text()
+
+
 def test_codex_migrates_owned_legacy_mcp(tmp_path, monkeypatch):
     monkeypatch.setattr(integrations, "CODEX_HOOKS", tmp_path / "hooks.json")
     monkeypatch.setattr(integrations, "MANIFEST", tmp_path / "installed.json")
@@ -261,6 +307,9 @@ def test_claude_uninstall_only_owned_user_server(tmp_path, monkeypatch):
 
 
 def test_claude_install_is_idempotent_and_preserves_other_servers(tmp_path, monkeypatch):
+    from laya_agent.config import Config
+
+    monkeypatch.setattr(integrations, "load_config", lambda: Config())
     settings = tmp_path / "settings.json"
     user = tmp_path / "claude.json"
     user.write_text('{"mcpServers":{"other":{"command":"other"}}}')
@@ -279,6 +328,7 @@ def test_claude_install_is_idempotent_and_preserves_other_servers(tmp_path, monk
     monkeypatch.setattr(integrations.subprocess, "run", fake_run)
     adapter = integrations.ClaudeAdapter()
     adapter.install("/tmp/laya-agent")
+    assert set(integrations._read_json(settings)["hooks"]) == {"SessionStart", "PreToolUse"}
     adapter.install("/tmp/laya-agent")
     assert sum(args[:3] == ("claude", "mcp", "add") for args in calls) == 1
     data = integrations._read_json(user)

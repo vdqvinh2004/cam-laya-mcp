@@ -11,7 +11,7 @@ from pathlib import Path
 
 import json5
 
-from .config import CONFIG_DIR
+from .config import CONFIG_DIR, load_config
 
 MANIFEST = CONFIG_DIR / "installed.json"
 CODEX_HOOKS = Path.home() / ".codex/hooks.json"
@@ -23,6 +23,11 @@ OPENCODE_CONFIG = OPENCODE_DIR / "opencode.json"
 OPENCODE_PLUGIN = OPENCODE_DIR / "plugins/laya-agent.js"
 MCP_NAME = "cam-laya-mcp"
 LEGACY_MCP_NAME = "laya-agent"
+
+
+def _codex_hooks_path() -> Path:
+    home = os.environ.get("CODEX_HOME")
+    return Path(home).expanduser() / "hooks.json" if home else CODEX_HOOKS
 
 
 def _manifest() -> dict:
@@ -121,7 +126,7 @@ def _add_hooks(path: Path, events: list[str], command: str, client: str) -> list
         hook_command = f"{shlex.quote(command)} hook {client} {event}"
         wanted = {"hooks": [{"type": "command", "command": hook_command, "timeout": 5}]}
         if event == "PreToolUse":
-            wanted["matcher"] = "Bash|bash|exec_command|Read|read|read_file"
+            wanted["matcher"] = "Bash|bash|exec_command|command_execution|Read|read|read_file"
         existing = next((group for group in groups if any(h.get("command") == hook_command for h in group.get("hooks", []))), None)
         if existing is None:
             groups.append(wanted)
@@ -164,6 +169,10 @@ def _install_hooks(path: Path, events: list[str], executable: str, client: str, 
     owned[key] = sorted((set(owned.get(key, [])) - set(stale)) | set(added))
 
 
+def _hook_events() -> list[str]:
+    return ["SessionStart", "PreToolUse"] + (["PostToolUse"] if load_config().post_test_guidance else [])
+
+
 def _run(*args: str) -> None:
     subprocess.run(args, check=True, capture_output=True, text=True, timeout=30)
 
@@ -193,7 +202,7 @@ class CodexAdapter(ClientAdapter):
         super().__init__("codex")
 
     def capabilities(self) -> dict:
-        return {"mcp": True, "hooks": ["SessionStart", "PreToolUse", "PostToolUse"], "automatic": True, "config": str(CODEX_HOOKS)}
+        return {"mcp": True, "hooks": _hook_events(), "automatic": True, "config": str(_codex_hooks_path())}
 
     def install(self, executable: str) -> None:
         owned = _manifest()
@@ -215,13 +224,13 @@ class CodexAdapter(ClientAdapter):
         if owned.get("codex_mcp"):
             owned["codex_mcp_name"] = MCP_NAME
             owned["codex_mcp_executable"] = executable
-        _install_hooks(CODEX_HOOKS, self.capabilities()["hooks"], executable, "codex", owned, "codex_hooks")
+        _install_hooks(_codex_hooks_path(), self.capabilities()["hooks"], executable, "codex", owned, "codex_hooks")
         _save_manifest(owned)
 
     def uninstall(self) -> None:
         owned = _manifest()
         if commands := owned.pop("codex_hooks", []):
-            _remove_hooks(CODEX_HOOKS, commands)
+            _remove_hooks(_codex_hooks_path(), commands)
         name = owned.pop("codex_mcp_name", LEGACY_MCP_NAME)
         executable = owned.pop("codex_mcp_executable", None)
         if owned.pop("codex_mcp", False) and self.detect():
@@ -231,7 +240,7 @@ class CodexAdapter(ClientAdapter):
         _save_manifest(owned)
 
     def validate(self) -> dict:
-        data = _read_json(CODEX_HOOKS)
+        data = _read_json(_codex_hooks_path())
         commands = {h.get("command") for groups in data.get("hooks", {}).values() for g in groups for h in g.get("hooks", [])}
         hooks = bool(commands & set(_manifest().get("codex_hooks", [])))
         mcp = self.detect() and subprocess.run(["codex", "mcp", "get", MCP_NAME], capture_output=True).returncode == 0
@@ -243,7 +252,7 @@ class ClaudeAdapter(ClientAdapter):
         super().__init__("claude")
 
     def capabilities(self) -> dict:
-        return {"mcp": True, "hooks": ["SessionStart", "PreToolUse", "PostToolUse"], "automatic": True, "config": str(CLAUDE_SETTINGS)}
+        return {"mcp": True, "hooks": _hook_events(), "automatic": True, "config": str(CLAUDE_SETTINGS)}
 
     def install(self, executable: str) -> None:
         owned = _manifest()
