@@ -2,13 +2,24 @@
 
 Small local decisions for coding agents, powered by [Laya-MLX](https://github.com/mizorewww/laya-mlx). Your coding LLM still reads the repository, reasons, writes code, and explains changes. Laya-MLX chooses among short options for selected workflow transitions. It uses MLX on Apple Silicon, with no Laya cloud account, API key, or PyTorch runtime.
 
-## Project status: experimental; productivity gate not met
+## Project status: stopped — guard-only is the product; accelerator work ended
+
+**Decision (2026-09-29): efficacy work on this project is stopped.** Four independent assistance ideas failed the same way, so iterating further would spend billed runs re-proving a negative. The safety guard below is finished and maintained; no new agent-assistance features are planned.
+
+Why, with evidence:
+
+- Model advice never earned its keep: deterministic rules matched 12/12 screened decisions vs 4/12 for raw Laya-MLX; every observed warm model call returned `defer_to_agent` after paying 0.1–0.4 s inference (37 s cold load). Model decisions stay opt-in.
+- No whole-task speed gain in any paired screen: +4.5 s (M5, 30 runs), +0.75 s with CI crossing zero (M8 corrected 27-run screen), +0.2 s with CI crossing zero (24-pair guard screen, `docs/milestone9-paired-summary.json`).
+- No token saving; one profile significantly increased use: PreToolUse+PostToolUse added 17,469 paired median tokens (95% CI +16,476 to +33,651).
+- Retrieval without delivery is useless: the Milestone 6 tool was never called (0 calls across guided pilots) despite relevant rankings.
+- Hints change actions, not outcomes: post-test `git diff` rose (7/9–9/9 vs 0/9) with zero fixes to an injected defect; Milestone 9 path hints hit 2/4 live targets and the candidate was removed per its stop rule.
+- Billed cost was never attributable per Codex run, so no cost claim was ever supportable.
+
+What remains true: the guard-only default passed its local gates (299/299 corpus, hook p95 ~40 ms, live safe-pass/destructive-deny on Codex and OpenCode) and needs no model, daemon, or account. See [release readiness](docs/release-readiness.md). OpenCode live guard execution is verified; Claude Code was never installed, so no claim covers it.
 
 The corrected isolated Codex screen tested three coding tasks across baseline, full-hook, and PreToolUse+PostToolUse profiles (27 runs). Checks passed 9/9, 8/9, and 9/9, respectively. Neither hook profile showed a reliable speed gain; PreToolUse+PostToolUse used 17,469 more paired median tokens (95% CI +16,476 to +33,651). A six-pair PreToolUse-only screen was inconclusive for time and tokens. Codex billed spend was not measured. See the [evaluation report](docs/codex-efficacy-baseline.md) and [release readiness](docs/release-readiness.md).
 
-This remains an experiment for model advice, not a proven speed or cost optimization. A small 12-state screen favored deterministic rules (12/12) over raw Laya choices (4/12), so clear test/review transitions use those rules without model inference. The post-test hint increased `git diff` actions in the corrected screen (7/9 and 9/9 vs. 0/9 baseline), but a controlled Unicode-digit defect remained unfixed in all five hook trials. No post-test edits were recorded. Keep model decisions opt-in; do not claim productivity or cost gains. The guard-only default passed the [Milestone 8 local gates](docs/release-readiness.md), including one isolated live Codex safe-pass and destructive-deny trial. OpenCode live execution remains unverified; Claude Code is not installed.
-
-Milestone 9 tested one automatic local path hint for Codex discovery tasks and stopped at its pilot gate: 2/4 live discovery targets in the top three (gate: 4/4), 0/2 bypass hints correct, quality 5/6 vs 6/6 guard-only. The candidate was removed; guard-only is unchanged and no efficiency or billed-cost claim follows. No OpenCode or Claude Code context support was attempted: OpenCode has no documented prompt event and Claude Code was not installed. See the [release readiness](docs/release-readiness.md) closeout.
+This remains an experiment for model advice, not a proven speed or cost optimization. A small 12-state screen favored deterministic rules (12/12) over raw Laya choices (4/12), so clear test/review transitions use those rules without model inference. The post-test hint increased `git diff` actions in the corrected screen (7/9 and 9/9 vs. 0/9 baseline), but a controlled Unicode-digit defect remained unfixed in all five hook trials. No post-test edits were recorded. Keep model decisions opt-in; do not claim productivity or cost gains. The guard-only default passed the [Milestone 8 local gates](docs/release-readiness.md), including isolated live Codex and OpenCode safe-pass and destructive-deny trials. Claude Code is not installed.
 
 ## Quickstart
 

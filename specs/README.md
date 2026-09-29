@@ -16,4 +16,6 @@ Each numbered folder owns one milestone's `spec.md`, `plan.md`, and `tasks.md`. 
 
 Release evidence and unresolved rollout gates remain in [release readiness](../docs/release-readiness.md).
 
+Efficacy work stopped 2026-09-29 after four negative results (Milestones 5, 6, 8 screens and the Milestone 9 pilot). Guard-only is the product; no new assistance features are planned.
+
 Milestones 3–6 keep their original historical numbers. Milestone 2 command-safety work is implemented. Current planning is Milestone 9; in a new checkout, set `SPECIFY_FEATURE_DIRECTORY=specs/009-measured-context-acceleration`. `.specify/feature.json` is local and ignored by Git.
