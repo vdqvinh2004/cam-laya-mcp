@@ -1,6 +1,6 @@
 # Milestone 5 validation guide
 
-These are acceptance steps for the planned implementation; the full coding-task runner is not implemented yet.
+These are the historical acceptance steps used to validate the implementation. The coding-task runner and paired evaluation are complete; see [the outcome](../../docs/codex-efficacy-baseline.md).
 
 ## Prerequisites
 

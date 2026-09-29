@@ -3,9 +3,27 @@ from __future__ import annotations
 import re
 
 from .config import load_config
-from .context import git_facts, project_facts
-from .daemon import record_rule_decision, request
 from .policy import deterministic_choice, hard_risk, unavailable_decision
+
+
+def git_facts():
+    from .context import git_facts as inspect
+    return inspect()
+
+
+def project_facts():
+    from .context import project_facts as inspect
+    return inspect()
+
+
+def request(*args, **kwargs):
+    from .daemon import request as send
+    return send(*args, **kwargs)
+
+
+def record_rule_decision(*args, **kwargs):
+    from .daemon import record_rule_decision as record
+    return record(*args, **kwargs)
 
 
 def _call(policy: str, state: dict) -> dict:
@@ -50,7 +68,7 @@ def run(client: str, event: str, payload: dict) -> dict:
         if not command:
             return {}
         hint = None
-        if client != "opencode" and re.search(r"\bgit\s+commit\b", command):
+        if client != "opencode" and re.search(r"\bgit\s+commit\b", command) and load_config().enabled:
             facts = {**project_facts(), **git_facts()}
             test = _call("test_decision", {"current_phase": "testing", **facts})
             review = _call("review_decision", {"current_phase": "review", **facts})
@@ -61,7 +79,8 @@ def run(client: str, event: str, payload: dict) -> dict:
         reason = hard_risk(command)
         if reason:
             return _deny(client, event, f"{reason}: obtain human approval before running this command")
-        if load_config().mandatory_safety or re.search(r"\b(?:git\s+push|npm\s+publish|docker\s+push|kubectl\s+apply)\b", command):
+        config = load_config()
+        if config.mandatory_safety or (config.enabled and re.search(r"\b(?:git\s+push|npm\s+publish|docker\s+push|kubectl\s+apply)\b", command)):
             risk = _call("risk_check", {"action": command[:320], **git_facts()})
             if risk.get("requires_human"):
                 return _deny(client, event, "Local risk check requires human approval")

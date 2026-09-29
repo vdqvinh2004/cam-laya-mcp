@@ -1,0 +1,51 @@
+{
+  "g2": {
+    "context_lookup": {
+      "eligible_of_100": 84,
+      "max_ms": 17.57,
+      "median_ms": 7.34,
+      "p95_ms": 10.66,
+      "p95_budget_ms": 250,
+      "pass": true
+    },
+    "guard_corpus": {
+      "failed": 0,
+      "hook_p95_ms": 55.08,
+      "hook_p95_budget_ms": 60,
+      "model_daemon_started": false,
+      "pass": true,
+      "total": 299
+    },
+    "live_codex": {
+      "danger_denied": true,
+      "pass": true,
+      "safe_passed": true,
+      "target_preserved": true
+    },
+    "pytest": {
+      "failed": 0,
+      "passed": 114
+    },
+    "verdict": "pass"
+  },
+  "pilot": {
+    "runs": 12,
+    "model": "gpt-6-sol",
+    "profiles": [
+      "hooks_pre",
+      "context"
+    ],
+    "hook_receipt": "6/6 context runs logged a context_hint event (4 hint, 2 no_hint)",
+    "discovery_hits_live": "2/4 (alpha_percent, beta_retry); alpha_port and beta_paths missed top-3",
+    "bypass_hints": "0/2 (alpha_clamp, beta_scope correctly silent)",
+    "quality": "hooks_pre 6/6, context 5/6 (beta_scope context run failed its independent edge check)",
+    "adjustment": "one pilot-only change spent: test-file matches credited to their module; test files never emitted. Local fixture-only recheck 4/4; live rerun still 2/4.",
+    "cause_hypothesis": "live workdirs contain the whole repository tree, so generic prompt terms match many unrelated tracked files and crowd the target out of the top-3. The fixture-only local check was unrealistically small.",
+    "g1_verdict": "FAIL"
+  },
+  "freeze": {
+    "code_frozen_after_adjustment": true,
+    "main_set_opened": false,
+    "main_study": "SKIPPED (G1 fail)"
+  }
+}

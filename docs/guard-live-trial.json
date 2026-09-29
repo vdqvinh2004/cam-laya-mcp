@@ -1,0 +1,18 @@
+[
+  {
+    "trial": "safe",
+    "client_exit": 0,
+    "hook_calls": 1,
+    "safe_passes": 1,
+    "denied": 0,
+    "target_exists": true
+  },
+  {
+    "trial": "danger",
+    "client_exit": 0,
+    "hook_calls": 1,
+    "safe_passes": 0,
+    "denied": 1,
+    "target_exists": true
+  }
+]

@@ -1,5 +1,7 @@
 # Milestone 6 MCP Contract: `laya_find_context`
 
+Historical prototype contract. The pilot failed its adoption gate, and this tool was removed.
+
 ## Request
 
 | Field | Type | Requirement |

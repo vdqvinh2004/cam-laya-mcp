@@ -37,8 +37,8 @@ Keep model inference off by default. If the retrieval gate passes, expose the to
 
 ## Outcome
 
-The pilot failed the adoption gate after one guidance adjustment: Codex made zero retrieval calls on four discovery trials. The tool prototype was removed and the full paired run was skipped. See `milestone-6-research.md` and the two pilot artifacts listed there. No benefit claim is supported.
+The pilot failed the adoption gate after one guidance adjustment: Codex made zero retrieval calls on four discovery trials. The tool prototype was removed and the full paired run was skipped. See [research](research.md) and the two pilot artifacts listed there. No benefit claim is supported.
 
 ## Task order
 
-T045–T047 define the research, acceptance criteria, and tool contract. T048–T050 implement and check the smallest local retrieval slice. T051–T052 build the hidden-target corpus and run the pilot. T053 runs the full paired evaluation. T054 records the result and applies the release gate.
+T045–T047 defined research, acceptance criteria, and the tool contract. T048–T050 implemented and checked the retrieval slice. T051–T052 built the hidden-target corpus and pilot attribution. T053 ran the pilot and one guidance adjustment. T054 stopped the full paired run after the adoption gate failed; T055 recorded the result and removed the prototype.

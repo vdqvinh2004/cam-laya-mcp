@@ -1,0 +1,36 @@
+{
+ "cases_file": "/Volumes/LexarPlaySSD/Develop/Codes/CAM/cam-laya-mcp/benchmarks/guard_cases.json",
+ "case_count": 299,
+ "corpus": {
+  "sets": {
+   "L": {
+    "total": 112,
+    "passed": 112
+   },
+   "B": {
+    "total": 113,
+    "passed": 113
+   },
+   "H": {
+    "total": 35,
+    "passed": 35
+   },
+   "G": {
+    "total": 39,
+    "passed": 39
+   }
+  },
+  "failures": [],
+  "failed": 0
+ },
+ "latency": {
+  "samples": 100,
+  "median_ms": 40.23,
+  "p95_ms": 42.47,
+  "max_ms": 43.68,
+  "denied_safe": 0,
+  "model_daemon_started": false
+ },
+ "p95_budget_ms": 60.0,
+ "p95_within_budget": true
+}

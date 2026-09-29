@@ -1,13 +1,21 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 import laya_agent.integrations as integrations
+
+
+@pytest.fixture(autouse=True)
+def isolated_codex_home_env(monkeypatch):
+    monkeypatch.delenv("CODEX_HOME", raising=False)
 
 
 def test_hook_install_idempotent_and_preserves_other_hooks(tmp_path):
@@ -23,6 +31,52 @@ def test_hook_install_idempotent_and_preserves_other_hooks(tmp_path):
     integrations._remove_hooks(path, added)
     after = json.loads(path.read_text())
     assert after["hooks"]["PreToolUse"][0]["hooks"][0]["command"] == "my-policy"
+
+
+def test_guard_refuses_unowned_hook_with_same_command(tmp_path):
+    path = tmp_path / "hooks.json"
+    command = "/tmp/laya hook codex PreToolUse"
+    path.write_text(json.dumps({"hooks": {"PreToolUse": [{"hooks": [{"type": "command", "command": command}]}]}}))
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match="Unowned"):
+        integrations._install_hooks(path, ["PreToolUse"], "/tmp/laya", "codex", {}, "codex_hooks")
+    assert path.read_bytes() == before
+
+
+def test_edited_owned_hook_is_preserved_on_upgrade_and_uninstall(tmp_path):
+    path = tmp_path / "hooks.json"
+    owned = {}
+    integrations._install_hooks(path, ["PreToolUse"], "/tmp/laya", "codex", owned, "codex_hooks")
+    data = integrations._read_json(path)
+    data["hooks"]["PreToolUse"][0]["matcher"] = "Bash"
+    path.write_text(json.dumps(data))
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match="Edited"):
+        integrations._install_hooks(path, ["PreToolUse"], "/tmp/new", "codex", owned, "codex_hooks")
+    integrations._remove_hooks(path, owned["codex_hooks"])
+    assert path.read_bytes() == before
+
+
+def test_session_hook_alone_is_not_a_guard(tmp_path, monkeypatch):
+    path = tmp_path / "hooks.json"
+    monkeypatch.setattr(integrations, "CODEX_HOOKS", path)
+    monkeypatch.setattr(integrations, "MANIFEST", tmp_path / "installed.json")
+    monkeypatch.setattr(integrations.subprocess, "run", lambda *a, **kw: SimpleNamespace(returncode=1))
+    owned = {}
+    integrations._install_hooks(path, ["SessionStart"], "/tmp/laya", "codex", owned, "codex_hooks")
+    integrations._save_manifest(owned)
+    assert not integrations.CodexAdapter().validate()["installed"]
+
+
+def test_unowned_opencode_plugin_is_not_reported_installed(tmp_path, monkeypatch):
+    monkeypatch.setattr(integrations, "DEFAULT_OPENCODE_DIR", tmp_path)
+    monkeypatch.setattr(integrations, "OPENCODE_CONFIG", tmp_path / "opencode.json")
+    monkeypatch.setattr(integrations, "OPENCODE_PLUGIN", tmp_path / "plugins/laya-agent.js")
+    monkeypatch.setattr(integrations, "MANIFEST", tmp_path / "installed.json")
+    plugin = tmp_path / "plugins/laya-agent.js"
+    plugin.parent.mkdir()
+    plugin.write_text("user plugin")
+    assert not integrations.OpenCodeAdapter().validate()["installed"]
 
 
 def test_owned_hook_path_upgrade_and_validation(tmp_path, monkeypatch):
@@ -148,6 +202,7 @@ def test_codex_adapter_owns_only_its_entries(tmp_path, monkeypatch):
     hooks.write_text(json.dumps({"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "user-start"}]}]}}))
     monkeypatch.setattr(integrations, "CODEX_HOOKS", hooks)
     monkeypatch.setattr(integrations, "MANIFEST", tmp_path / "installed.json")
+    monkeypatch.setattr(integrations.CodexAdapter, "detect", lambda self: True)
     existing = {"mcp": False}
     calls = []
 
@@ -218,6 +273,7 @@ def test_codex_uses_codex_home_for_hooks(tmp_path, monkeypatch):
 def test_codex_migrates_owned_legacy_mcp(tmp_path, monkeypatch):
     monkeypatch.setattr(integrations, "CODEX_HOOKS", tmp_path / "hooks.json")
     monkeypatch.setattr(integrations, "MANIFEST", tmp_path / "installed.json")
+    monkeypatch.setattr(integrations.CodexAdapter, "detect", lambda self: True)
     integrations._save_manifest({"codex_mcp": True})
     names = {"laya-agent"}
 
@@ -365,3 +421,71 @@ def test_uninstall_preserves_repointed_codex_and_opencode_entries(tmp_path, monk
     integrations.OpenCodeAdapter().uninstall()
     assert integrations._read_json(config)["mcp"]["cam-laya-mcp"]["command"] == ["/tmp/user-tool", "mcp"]
     assert plugin.read_text() == "user plugin edit"
+
+
+@pytest.mark.parametrize("client", ["codex", "claude", "opencode"])
+def test_guard_only_installs_only_owned_safety_entries(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(integrations, "MANIFEST", tmp_path / "installed.json")
+    monkeypatch.setattr(integrations, "CODEX_HOOKS", tmp_path / "codex/hooks.json")
+    monkeypatch.setattr(integrations, "CLAUDE_SETTINGS", tmp_path / "claude/settings.json")
+    monkeypatch.setattr(integrations, "DEFAULT_OPENCODE_DIR", tmp_path / "opencode")
+    monkeypatch.setattr(integrations, "OPENCODE_CONFIG", tmp_path / "opencode/opencode.json")
+    monkeypatch.setattr(integrations, "OPENCODE_PLUGIN", tmp_path / "opencode/plugins/laya-agent.js")
+    calls = []
+    monkeypatch.setattr(integrations.subprocess, "run", lambda args, **kw: calls.append(args) or SimpleNamespace(returncode=1, stdout=""))
+    adapter = next(a for a in integrations.ADAPTERS if a.name == client)
+    adapter.install("/tmp/cam-laya-mcp", with_model=False)
+    adapter.install("/tmp/cam-laya-mcp", with_model=False)
+    assert not any("mcp" in args for args in calls)
+    assert adapter.validate()["installed"]
+    if client == "opencode":
+        assert not (tmp_path / "opencode/opencode.json").exists()
+        plugin = (tmp_path / "opencode/plugins/laya-agent.js").read_text()
+        assert "tool.execute.before" in plugin and "tool.execute.after" not in plugin
+    else:
+        path = tmp_path / client / ("hooks.json" if client == "codex" else "settings.json")
+        assert set(integrations._read_json(path)["hooks"]) == {"PreToolUse"}
+    adapter.uninstall()
+    assert not adapter.validate()["installed"]
+
+
+def test_guard_only_clean_room_cli_roundtrip(tmp_path):
+    executable = str(Path(sys.executable).parent / "cam-laya-mcp")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    for client in ("codex", "claude", "opencode"):
+        binary = fake_bin / client
+        binary.write_text("#!/bin/sh\nexit 1\n")
+        binary.chmod(0o755)
+    codex = tmp_path / "codex/hooks.json"
+    claude = tmp_path / ".claude/settings.json"
+    opencode = tmp_path / "opencode/opencode.jsonc"
+    for path in (codex, claude, opencode):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    codex.write_text('{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"user-hook"}]}]}}')
+    claude.write_text('{"other":"preserve"}')
+    opencode.write_text('// preserve note\n{"theme":"dark"}')
+    env = {**os.environ, "HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path / "xdg-config"),
+           "XDG_STATE_HOME": str(tmp_path / "xdg-state"), "CODEX_HOME": str(tmp_path / "codex"),
+           "OPENCODE_CONFIG_DIR": str(tmp_path / "opencode"), "PATH": f"{fake_bin}:/usr/bin:/bin"}
+    assert shutil.which("uv", path=env["PATH"]) is None
+    for command in ([executable, "setup"], [executable, "setup", "--guard-only"]):
+        setup = subprocess.run(command, env=env, capture_output=True, text=True)
+        assert setup.returncode == 0, setup.stdout + setup.stderr
+    assert set(json.loads(codex.read_text())["hooks"]) == {"PreToolUse"}
+    assert "user-hook" in codex.read_text() and "preserve" in claude.read_text()
+    assert "preserve note" in opencode.read_text()
+    assert "mcp" not in opencode.read_text()
+    assert "tool.execute.after" not in (tmp_path / "opencode/plugins/laya-agent.js").read_text()
+    for command, blocked in (("git status", False), ("rm -rf /tmp/work", True)):
+        result = subprocess.run([executable, "hook", "codex", "PreToolUse"], env=env,
+                                input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
+                                capture_output=True, text=True)
+        assert result.returncode == 0 and ("permissionDecision" in result.stdout) == blocked
+    model = subprocess.run([executable, "setup", "--with-model"], env=env, capture_output=True, text=True)
+    assert model.returncode == 1
+    assert "PreToolUse" in codex.read_text()
+    assert not (tmp_path / "xdg-state/laya-agent/agent.sock").exists()
+    assert subprocess.run([executable, "uninstall"], env=env, capture_output=True).returncode == 0
+    assert "user-hook" in codex.read_text() and "cam-laya-mcp" not in codex.read_text()
+    assert "preserve note" in opencode.read_text() and "theme" in opencode.read_text()

@@ -1,0 +1,190 @@
+{
+  "tasks": [
+    {
+      "id": "alpha_port",
+      "cohort": "pilot",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_percent",
+      "cohort": "pilot",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_retry",
+      "cohort": "pilot",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_paths",
+      "cohort": "pilot",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_clamp",
+      "cohort": "pilot",
+      "kind": "bypass",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_scope",
+      "cohort": "pilot",
+      "kind": "bypass",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_email",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_semver",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_duration",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_hexcolor",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_backoff",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_ttl",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_config",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_slug",
+      "cohort": "main",
+      "kind": "discovery",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_ini",
+      "cohort": "main",
+      "kind": "bypass",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "alpha_csvrow",
+      "cohort": "main",
+      "kind": "bypass",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_envflag",
+      "cohort": "main",
+      "kind": "bypass",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    },
+    {
+      "id": "beta_redact",
+      "cohort": "main",
+      "kind": "bypass",
+      "check_exit": 1,
+      "independent_exit": 1,
+      "reproduces": true,
+      "prompt_hides_target": true,
+      "scope_ok": true
+    }
+  ],
+  "target_overlap": [],
+  "all_ok": true,
+  "revisions": {
+    "alpha": "m9-fixture-v1:2649c31835ee",
+    "beta": "m9-fixture-v1:4d9da662ad18"
+  }
+}

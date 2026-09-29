@@ -24,13 +24,16 @@ HOME = pathlib.Path.home()
 CODEX_HOME = pathlib.Path(os.environ.get("CODEX_HOME", HOME / ".codex"))
 TASKS = json.loads((ROOT / "benchmarks/codex_tasks.json").read_text())
 CODING_TASKS = json.loads((ROOT / "benchmarks/codex_coding_tasks.json").read_text())
+CONTEXT_TASKS = json.loads((ROOT / "benchmarks/codex_context_tasks.json").read_text())["tasks"]
 TEST_COMMAND = re.compile(r"\b(pytest|npm\s+test|cargo\s+test|go\s+test|vitest|python(?:3(?:\.\d+)?)?\s+-m\s+unittest)\b")
+DISCOVERY_COMMAND = re.compile(r"\b(ls|find|grep|rg|fd|glob|cat|head|tail|tree|file|wc|sed|awk|ls-files|git\s+ls-files)\b")
 REVIEW_COMMAND = re.compile(r"\bgit\s+diff(?:\s|$)", re.IGNORECASE)
 HOOK_PROFILES = {
     "hooks": ("SessionStart", "PreToolUse", "PostToolUse"),
     "hooks_session_pre": ("SessionStart", "PreToolUse"),
     "hooks_pre_post": ("PreToolUse", "PostToolUse"),
     "hooks_pre": ("PreToolUse",),
+    "context": ("PreToolUse", "UserPromptSubmit"),
 }
 
 
@@ -61,7 +64,7 @@ def is_laya_hook_command(command: str, binary: str) -> bool:
         parts = parts[1:]
         while parts and "=" in parts[0]:
             parts = parts[1:]
-    return len(parts) == 4 and parts[0] == binary and parts[1:3] == ["hook", "codex"] and parts[3] in {"SessionStart", "PreToolUse", "PostToolUse"}
+    return len(parts) == 4 and parts[0] == binary and parts[1:3] == ["hook", "codex"] and parts[3] in {"SessionStart", "PreToolUse", "PostToolUse", "UserPromptSubmit"}
 
 
 def laya_only_hooks(hooks: dict, binary: str, prefix: str, events: tuple[str, ...] | None = None) -> dict:
@@ -170,13 +173,14 @@ def isolated_config(directory: pathlib.Path, profile: str, model: str, workdir: 
         shutil.copyfile(source_config, target_config / "config.toml")
     config_path = target_config / "config.toml"
     config_lines = config_path.read_text().splitlines() if config_path.exists() else []
-    setting = f"post_test_guidance = {str(post_test_guidance).lower()}"
-    setting_line = next((i for i, line in enumerate(config_lines) if re.match(r"\s*post_test_guidance\s*=", line)), None)
-    if setting_line is None:
-        setting_line = next((i for i, line in enumerate(config_lines) if line.lstrip().startswith("[")), len(config_lines))
-        config_lines.insert(setting_line, setting)
-    else:
-        config_lines[setting_line] = setting
+    for key, value in (("post_test_guidance", post_test_guidance), ("context_hint", profile == "context")):
+        setting = f"{key} = {str(value).lower()}"
+        setting_line = next((i for i, line in enumerate(config_lines) if re.match(rf"\s*{key}\s*=", line)), None)
+        if setting_line is None:
+            setting_line = next((i for i, line in enumerate(config_lines) if line.lstrip().startswith("[")), len(config_lines))
+            config_lines.insert(setting_line, setting)
+        else:
+            config_lines[setting_line] = setting
     config_path.write_text("\n".join(config_lines) + "\n")
     if mcp_enabled:
         config.extend(("", '[mcp_servers."cam-laya-mcp"]', 'command = "/usr/bin/env"'))
@@ -209,6 +213,7 @@ def summarize_events(output: str) -> dict:
     tool_counts: dict[str, int] = {}
     item_types: dict[str, int] = {}
     test_commands = 0
+    discovery_action_calls = 0
     post_test_diff_actions = 0
     post_test_file_changes = 0
     passed_test_seen = False
@@ -246,6 +251,7 @@ def summarize_events(output: str) -> dict:
                         collect_commands(nested)
             collect_commands(item)
             test_commands += any(TEST_COMMAND.search(cmd) for cmd in commands)
+            discovery_action_calls += sum(bool(DISCOVERY_COMMAND.search(cmd)) and not TEST_COMMAND.search(cmd) for cmd in commands)
             command_succeeded = item.get("status") != "failed" and item.get("exit_code") in (None, 0)
             for command in commands:
                 test_match = TEST_COMMAND.search(command)
@@ -296,7 +302,7 @@ def summarize_events(output: str) -> dict:
             final_text = item.get("text", final_text)
         if event.get("type") == "error":
             errors.append(str(event.get("message", "error")))
-    result = {**totals, "mcp_tool_calls": tool_calls, "mcp_tool_errors": tool_errors, "mcp_tool_error_types": tool_error_types, "mcp_tool_shapes": tool_shapes, "mcp_tool_outcomes": tool_outcomes, "tool_calls": tool_counts, "item_types": item_types, "test_command_calls": test_commands, "post_test_diff_actions": post_test_diff_actions, "post_test_file_change_items": post_test_file_changes, "response_present": bool(final_text.strip()), "_answer_text": final_text, "errors": errors}
+    result = {**totals, "mcp_tool_calls": tool_calls, "mcp_tool_errors": tool_errors, "mcp_tool_error_types": tool_error_types, "mcp_tool_shapes": tool_shapes, "mcp_tool_outcomes": tool_outcomes, "tool_calls": tool_counts, "item_types": item_types, "test_command_calls": test_commands, "discovery_action_calls": discovery_action_calls, "post_test_diff_actions": post_test_diff_actions, "post_test_file_change_items": post_test_file_changes, "response_present": bool(final_text.strip()), "_answer_text": final_text, "errors": errors}
     if tool_error_details:
         result["mcp_tool_error_details"] = tool_error_details
     return result
@@ -336,8 +342,8 @@ def set_trial_run_id(env: dict[str, str], run_id: str) -> None:
         for groups in hooks.get("hooks", {}).values():
             for group in groups:
                 for hook in group.get("hooks", []):
-                    command = re.sub(r"CAM_LAYA_RUN_ID=[a-f0-9]+ ", "", hook["command"])
-                    hook["command"] = command.replace("/usr/bin/env ", f"/usr/bin/env CAM_LAYA_RUN_ID={run_id} ", 1)
+                    command = re.sub(r"(?:CAM_LAYA_EVAL_HOOK_LOG=1 |CAM_LAYA_RUN_ID=[a-f0-9]+ )", "", hook["command"])
+                    hook["command"] = command.replace("/usr/bin/env ", f"/usr/bin/env CAM_LAYA_EVAL_HOOK_LOG=1 CAM_LAYA_RUN_ID={run_id} ", 1)
         hooks_path.write_text(json.dumps(hooks))
 
 
@@ -395,16 +401,29 @@ def run_one(task: dict, profile: str, model: str, env: dict[str, str], workdir: 
         isolation["post_run_static_pass"] = False
         isolation["post_run_error"] = str(error).removeprefix("isolation audit failed: ")
     decisions, client_events = read_decisions(env, run_id) if profile != "baseline" else ([], [])
+    hook_log = pathlib.Path(env["XDG_STATE_HOME"]) / "laya-agent/hook-calls.jsonl"
+    hook_calls = 0
+    if profile != "baseline" and hook_log.exists():
+        for line in hook_log.read_text().splitlines():
+            try:
+                hook_calls += json.loads(line).get("run_id") == run_id
+            except json.JSONDecodeError:
+                continue
     inferences = [row["inference_ms"] for row in decisions if isinstance(row.get("inference_ms"), (int, float))]
+    lookups = [row["lookup_ms"] for row in decisions if isinstance(row.get("lookup_ms"), (int, float))]
+    sanitized = [{key: value for key, value in row.items() if key != "hint_files"} for row in decisions]
     stats = {
         "laya_decisions": sum(row.get("outcome") == "model" for row in decisions),
         "hook_decisions": sum(row.get("source") == "hook" for row in decisions),
         "mcp_decisions": sum(row.get("source") == "mcp" for row in decisions),
         "cache_hits": sum(row.get("outcome") == "cache" for row in decisions),
         "laya_failures": sum(row.get("outcome") == "failure" for row in decisions),
-        "decisions_by_policy_delta": {policy: sum(row.get("policy") == policy for row in decisions) for policy in ("route_task", "next_action", "test_decision", "review_decision", "risk_check")},
+        "context_hints": sum(row.get("policy") == "context_hint" for row in decisions),
+        "context_lookup_ms": round(statistics.mean(lookups), 2) if lookups else None,
+        "context_hint_chars": sum(row.get("hint_chars", 0) for row in decisions if isinstance(row.get("hint_chars"), int)),
+        "decisions_by_policy_delta": {policy: sum(row.get("policy") == policy for row in decisions) for policy in ("route_task", "next_action", "test_decision", "review_decision", "risk_check", "context_hint")},
         "average_latency_ms": round(statistics.mean(inferences), 2) if inferences else None,
-        "decision_events": decisions,
+        "decision_events": sanitized,
         "client_events": client_events,
     }
     summary = summarize_events(output)
@@ -432,6 +451,9 @@ def run_one(task: dict, profile: str, model: str, env: dict[str, str], workdir: 
         check = subprocess.run(task["check"], cwd=workdir, capture_output=True, text=True, timeout=60)
         independent_check = subprocess.run(task["independent_check"], cwd=workdir, capture_output=True, text=True, timeout=60) if task.get("independent_check") else None
         changed = {name for name, original in task["files"].items() if (workdir / name).exists() and (workdir / name).read_text() != original}
+        hint_files = {name for row in decisions for name in (row.get("hint_files") or []) if isinstance(name, str)}
+        summary.update(hinted_first_use=bool(hint_files & changed), context_hint_files=len(hint_files),
+                       hint_hit_target=bool(hint_files & set(task["allowed_changes"])))
         missing = [name for name in task["files"] if not (workdir / name).exists()]
         added = [str(path.relative_to(workdir)) for path in (workdir / "bench_case").rglob("*") if path.is_file() and path.suffix == ".py" and str(path.relative_to(workdir)) not in task["files"]]
         rubric = changed == set(task["allowed_changes"]) and not missing and not added
@@ -446,6 +468,7 @@ def run_one(task: dict, profile: str, model: str, env: dict[str, str], workdir: 
         summary["quality_ok"] = isolation["passed"] and marker_match and (summary["test_command_calls"] >= required_tests or test_evidence is not None) and summary["mcp_tool_errors"] == 0 and actual_mcp >= required_mcp
     return {
         "task": task["id"], "condition": profile, "cohort": cohort, "eligible": task.get("eligible"),
+        "hook_calls": hook_calls,
         "exit_code": exit_code, "elapsed_seconds": elapsed, "first_response_ms": first_response,
         **summary, "answer_marker_match": marker_match, "test_evidence": test_evidence, "laya_stats_delta": stats, "isolation": isolation,
         "stderr_present": bool(stderr.strip()),
@@ -508,10 +531,10 @@ def trust_workdir(env: dict[str, str], workdir: pathlib.Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--self-check", action="store_true")
-    parser.add_argument("--suite", choices=("diagnostic", "coding"), default="diagnostic")
+    parser.add_argument("--suite", choices=("diagnostic", "coding", "context"), default="diagnostic")
     parser.add_argument("--task", action="append")
     parser.add_argument("--condition", choices=("baseline", "with_cam_laya", "all"), default="all")
-    parser.add_argument("--profiles", nargs="+", choices=("baseline", "hooks", "hooks_session_pre", "hooks_pre_post", "hooks_pre", "mcp", "combined"))
+    parser.add_argument("--profiles", nargs="+", choices=("baseline", "hooks", "hooks_session_pre", "hooks_pre_post", "hooks_pre", "context", "mcp", "combined"))
     parser.add_argument("--cohort", choices=("mixed", "cold", "warm", "both"), default="mixed")
     parser.add_argument("--repetitions", type=int, default=1)
     parser.add_argument("--output", type=pathlib.Path, default=pathlib.Path("docs/codex-efficacy-results.json"))
@@ -569,7 +592,7 @@ def main() -> None:
             assert sum(len(row["hooks"]) for rows in filtered.values() for row in rows) == 2
             assert set(pre_only) == {"PreToolUse"} and sum(len(row["hooks"]) for rows in pre_only.values() for row in rows) == 1
             assert all(is_laya_hook_command(hook["command"], binary) for rows in filtered.values() for row in rows for hook in row["hooks"])
-            for profile in ("baseline", "hooks", "hooks_session_pre", "hooks_pre_post", "hooks_pre"):
+            for profile in ("baseline", "hooks", "hooks_session_pre", "hooks_pre_post", "hooks_pre", "context"):
                 home = pathlib.Path(directory) / profile
                 home.mkdir()
                 workspace = pathlib.Path(directory) / f"{profile}-work"
@@ -580,13 +603,35 @@ def main() -> None:
                     f'model = "test"\nmodel_reasoning_effort = "low"\n\n[projects.{toml_string(str(workspace))}]\ntrust_level = "trusted"\n\n[features]\nhooks = {str(profile in HOOK_PROFILES).lower()}\nplugins = false\nremote_plugin = false\n'
                 )
                 if profile != "baseline":
-                    hooks = laya_only_hooks(fake_hooks, binary, prefix, HOOK_PROFILES.get(profile, HOOK_PROFILES["hooks"]))
+                    events = HOOK_PROFILES.get(profile, HOOK_PROFILES["hooks"])
+                    hooks = laya_only_hooks(fake_hooks, binary, prefix, events)
+                    for event in events:
+                        if event not in hooks:
+                            group = {"hooks": [{"type": "command", "command": shlex.join((*shlex.split(prefix), binary, "hook", "codex", event)), "timeout": 5}]}
+                            if event == "PreToolUse":
+                                group["matcher"] = "Bash|bash|exec_command|command_execution|Read|read|read_file"
+                            hooks[event] = [group]
                     (home / "hooks.json").write_text(json.dumps({"hooks": hooks}))
                 proof = audit_isolation({
                     "CODEX_HOME": str(home), "XDG_CONFIG_HOME": str(home / "xdg-config"), "XDG_STATE_HOME": str(home / "xdg-state"),
                 }, profile, workspace, binary=binary)
                 assert proof["static_pass"] and proof["mcp_servers"] == []
-                assert proof["hook_command_count"] == {"baseline": 0, "hooks": 3, "hooks_session_pre": 2, "hooks_pre_post": 2, "hooks_pre": 1}[profile]
+                assert proof["hook_command_count"] == {"baseline": 0, "hooks": 3, "hooks_session_pre": 2, "hooks_pre_post": 2, "hooks_pre": 1, "context": 2}[profile]
+            discovery_sample = summarize_events('\n'.join((
+                '{"type":"item.completed","item":{"type":"command_execution","command":"ls alpha"}}',
+                '{"type":"item.completed","item":{"type":"command_execution","command":"find beta -name \\"*.py\\""}}',
+                '{"type":"item.completed","item":{"type":"command_execution","command":"python3 -m unittest discover -q"}}',
+            )))
+            assert discovery_sample["discovery_action_calls"] == 2 and discovery_sample["test_command_calls"] == 1
+            context_decisions = [
+                {"policy": "context_hint", "outcome": "rule", "source": "hook", "lookup_ms": 12.0, "hint_chars": 120, "hint_files": ["alpha/port.py"]},
+                {"policy": "risk_check", "outcome": "rule", "source": "hook"},
+            ]
+            assert sum(row.get("policy") == "context_hint" for row in context_decisions) == 1
+            assert sum(row.get("hint_chars", 0) for row in context_decisions if isinstance(row.get("hint_chars"), int)) == 120
+            assert {key for row in context_decisions for key in row} >= {"policy", "lookup_ms", "hint_chars", "hint_files"}
+            stripped = [{key: value for key, value in row.items() if key != "hint_files"} for row in context_decisions]
+            assert all("hint_files" not in row for row in stripped)
             snapshot = pathlib.Path(directory) / "trial-snapshot"
             snapshot.mkdir()
             subprocess.run(["git", "init", "-q", "--template=", str(snapshot)], check=True)
@@ -603,7 +648,7 @@ def main() -> None:
         return
     if args.repetitions < 1:
         parser.error("--repetitions must be positive")
-    task_set = CODING_TASKS if args.suite == "coding" else TASKS
+    task_set = {"diagnostic": TASKS, "coding": CODING_TASKS, "context": CONTEXT_TASKS}[args.suite]
     unknown = set(args.task or ()) - {task["id"] for task in task_set}
     if unknown:
         parser.error(f"unknown task IDs: {', '.join(sorted(unknown))}")
@@ -615,7 +660,7 @@ def main() -> None:
         snapshot = pathlib.Path(temporary) / "snapshot"
         scratch = pathlib.Path(temporary) / "scratch"
         scratch.mkdir()
-        if args.suite == "coding":
+        if args.suite in {"coding", "context"}:
             shutil.copytree(ROOT, snapshot, ignore=shutil.ignore_patterns(".git", ".codex", ".venv", "venv", "dist", "__pycache__", ".pytest_cache", ".ruff_cache", ".codebase-memory", "benchmarks", "docs"))
             subprocess.run(["git", "init", "-q", "--template=", str(snapshot)], check=True)
             subprocess.run(["git", "-C", str(snapshot), "add", "-A"], check=True)
@@ -634,7 +679,7 @@ def main() -> None:
                         order = (*profiles[offset:], *profiles[:offset])
                         for position, profile in enumerate(order, 1):
                             workdir = scratch
-                            if args.suite == "coding":
+                            if args.suite in {"coding", "context"}:
                                 workdir = pathlib.Path(temporary) / f"work-{len(results)}"
                                 prepare_coding_trial(snapshot, task, workdir)
                                 trust_workdir(environments[profile], workdir)
@@ -669,8 +714,8 @@ def main() -> None:
             "independent_check_passes": sum(r.get("independent_check_pass") is True for r in rows),
             "answer_marker_matches": sum(r["answer_marker_match"] is True for r in rows),
             "quality_passes": sum(r["quality_ok"] for r in rows),
-            "laya_stats": {k: sum(r["laya_stats_delta"].get(k, 0) or 0 for r in rows) for k in ("laya_decisions", "hook_decisions", "mcp_decisions", "cache_hits", "laya_failures")},
-            "policy_decisions": {policy: sum(r["laya_stats_delta"].get("decisions_by_policy_delta", {}).get(policy, 0) for r in rows) for policy in ("route_task", "next_action", "test_decision", "review_decision", "risk_check")},
+            "laya_stats": {k: sum(r["laya_stats_delta"].get(k, 0) or 0 for r in rows) for k in ("laya_decisions", "hook_decisions", "mcp_decisions", "cache_hits", "laya_failures", "context_hints")},
+            "policy_decisions": {policy: sum(r["laya_stats_delta"].get("decisions_by_policy_delta", {}).get(policy, 0) for r in rows) for policy in ("route_task", "next_action", "test_decision", "review_decision", "risk_check", "context_hint")},
         }))
 
 
